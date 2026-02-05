@@ -390,34 +390,41 @@
     saveFeelingToServer();
   });
 
-  // Handle Enter key to save and update log immediately
-  feelingInput.addEventListener('keypress', (e) => {
+  // Handle Enter key to save and update log immediately (use keydown for reliability)
+  feelingInput.addEventListener('keydown', async (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      e.stopPropagation();
       if (feelingTimer) clearTimeout(feelingTimer);
-      
+
       const today = getTodayKey().replace('feelings_', '');
       const feelingText = (feelingInput.value || '').trim();
       const usernameEl = document.getElementById('usernameBox');
       const username = (usernameEl && usernameEl.value) || 'Anonymous';
 
-      if (feelingText) {
-        const payload = {
-          date: today,
-          name: username,
-          feeling: feelingText
-        };
-        fetch('/feeling', {
+      if (!feelingText) return;
+
+      const payload = {
+        date: today,
+        name: username,
+        feeling: feelingText
+      };
+
+      try {
+        const res = await fetch('/feeling', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
-        }).then(res => {
-          if (res.ok) {
-            loadFeelingHistory();
-            feelingInput.value = '';
-            feelingInput.blur();
-          }
-        }).catch(e => console.warn('Failed to save feeling', e));
+        });
+        if (res.ok) {
+          await loadFeelingHistory();
+          feelingInput.value = '';
+          feelingInput.blur();
+        } else {
+          console.warn('Failed to save feeling', await res.text());
+        }
+      } catch (err) {
+        console.warn('Failed to save feeling', err);
       }
     }
   });
