@@ -214,6 +214,14 @@
   let saveTimer = null;
   let lastSavedState = null;
   let isLoaded = false; // becomes true after initial loadProgress() completes
+  // UI helper for progress save status
+  function setProgressStatus(state, text) {
+    const el = document.getElementById('progressSaveStatus');
+    if (!el) return;
+    el.classList.remove('saved', 'saving', 'error');
+    el.classList.add(state);
+    if (typeof text === 'string') el.textContent = text;
+  }
   function scheduleSave() {
     if (!isLoaded) return; // do not schedule saves before initial load
     if (saveTimer) clearTimeout(saveTimer);
@@ -228,7 +236,11 @@
     const payload = collectState();
     const payloadStr = JSON.stringify(payload);
     // skip sending if nothing changed since last successful save
-    if (lastSavedState === payloadStr) return;
+    if (lastSavedState === payloadStr) {
+      setProgressStatus('saved', 'Saved');
+      return;
+    }
+    setProgressStatus('saving', 'Saving…');
     try {
       const res = await fetch('/progress', {
         method: 'POST',
@@ -237,11 +249,14 @@
       });
       if (res && res.ok) {
         lastSavedState = payloadStr;
+        setProgressStatus('saved', 'Saved');
       } else {
         // server returned error - do not update lastSavedState
+        setProgressStatus('error', 'Save failed');
         console.warn('Save returned non-ok response', res && res.status);
       }
     } catch (e) {
+      setProgressStatus('error', 'Save failed');
       console.warn('Failed to save progress', e);
     }
   }
@@ -424,6 +439,8 @@
     } catch (e) {
       lastSavedState = null;
     }
+    // reflect saved status in UI
+    try { setProgressStatus('saved', 'Saved'); } catch (e) {}
   }
 
   // Load saved progress from server and populate inputs
