@@ -212,6 +212,7 @@
 
   // Debounced save: collect full state and POST to server
   let saveTimer = null;
+  let lastSavedState = null;
   function scheduleSave() {
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(() => saveNow(), 600);
@@ -222,12 +223,21 @@
   async function saveNow() {
     if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
     const payload = collectState();
+    const payloadStr = JSON.stringify(payload);
+    // skip sending if nothing changed since last successful save
+    if (lastSavedState === payloadStr) return;
     try {
-      await fetch('/progress', {
+      const res = await fetch('/progress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: payloadStr
       });
+      if (res && res.ok) {
+        lastSavedState = payloadStr;
+      } else {
+        // server returned error - do not update lastSavedState
+        console.warn('Save returned non-ok response', res && res.status);
+      }
     } catch (e) {
       console.warn('Failed to save progress', e);
     }
@@ -409,6 +419,12 @@
           }
         }
       });
+      // set lastSavedState to loaded server state to avoid immediately re-saving
+      try {
+        lastSavedState = JSON.stringify(obj || {});
+      } catch (e) {
+        lastSavedState = null;
+      }
     } catch (e) {
       console.warn('Failed to load progress', e);
     }

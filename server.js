@@ -1,12 +1,21 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+
+// Load environment from .env.local when present
+try {
+  require('dotenv').config({ path: path.join(__dirname, '.env.local') });
+} catch (e) {
+  // dotenv is optional in environments where env vars are provided externally
+}
 let blobClient;
 try {
   // Use Vercel Blob SDK when available and token is configured
   const { put, head } = require('@vercel/blob');
   blobClient = { put, head };
 } catch (e) {
+  console.warn('Vercel Blob SDK not available, falling back to file system storage.');
+  console.warn(e);
   // fall back to file system when SDK is not available
   blobClient = null;
 }
