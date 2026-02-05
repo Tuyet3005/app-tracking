@@ -1,1 +1,5 @@
 node_modules/
+.vercel
+.env*.local
+progress.json
+feelings.json

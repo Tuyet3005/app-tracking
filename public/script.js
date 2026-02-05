@@ -77,7 +77,7 @@
       tr.appendChild(th);
       cols.forEach(c => {
         const td = document.createElement('td');
-          // wrapper to position star overlay
+          // wrapper to position star overlay and status button
           const wrap = document.createElement('div');
           wrap.className = 'cell-wrap';
           const input = document.createElement('input');
@@ -89,11 +89,21 @@
           input.placeholder = '0/0';
           input.addEventListener('input', onCellInput);
           input.addEventListener('blur', onCellBlur);
+          // status button for reading progress - always visible inside cell
+          const statusBtn = document.createElement('button');
+          statusBtn.className = 'cell-status-btn';
+          statusBtn.setAttribute('type', 'button');
+          statusBtn.setAttribute('aria-label', 'Toggle cell status');
+          statusBtn.setAttribute('data-passage', title);
+          statusBtn.setAttribute('data-col', c);
+          statusBtn.setAttribute('data-row', r);
+          statusBtn.addEventListener('click', (e) => onStatusBtnClick(e, input, td));
           const star = document.createElement('span');
           star.className = 'cell-star';
           // prettier SVG star so it's crisp and doesn't obscure input text
           star.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" fill="#f4f402" stroke="#D1D100" stroke-width="0.2"/></svg>';
           wrap.appendChild(input);
+          wrap.appendChild(statusBtn);
           wrap.appendChild(star);
           td.appendChild(wrap);
         tr.appendChild(td);
@@ -166,10 +176,20 @@
         input.placeholder = '0/0';
         input.addEventListener('input', onCellInput);
         input.addEventListener('blur', onCellBlur);
+        // status button for listening progress - always visible inside cell
+        const statusBtn = document.createElement('button');
+        statusBtn.className = 'cell-status-btn';
+        statusBtn.setAttribute('type', 'button');
+        statusBtn.setAttribute('aria-label', 'Toggle cell status');
+        statusBtn.setAttribute('data-part', title);
+        statusBtn.setAttribute('data-col', c);
+        statusBtn.setAttribute('data-row', r);
+        statusBtn.addEventListener('click', (e) => onStatusBtnClick(e, input, td));
         const star = document.createElement('span');
         star.className = 'cell-star';
         star.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" fill="#FFFF00" stroke="#ffd700" stroke-width="0.2"/></svg>';
         wrap.appendChild(input);
+        wrap.appendChild(statusBtn);
         wrap.appendChild(star);
         td.appendChild(wrap);
         tr.appendChild(td);
@@ -214,13 +234,14 @@
   }
 
   function collectState() {
-    const data = { passages: {}, parts: {} };
+    const data = { passages: {}, parts: {}, cellStates: {} };
     document.querySelectorAll('input.practice-input').forEach(input => {
       const part = input.getAttribute('data-part');
       const p = input.getAttribute('data-passage');
       const r = input.getAttribute('data-row');
       const c = input.getAttribute('data-col');
       const v = (input.value || '').trim();
+      
       if (part) {
         data.parts[part] = data.parts[part] || {};
         data.parts[part][r] = data.parts[part][r] || {};
@@ -230,6 +251,13 @@
         data.passages[pass] = data.passages[pass] || {};
         data.passages[pass][r] = data.passages[pass][r] || {};
         data.passages[pass][r][c] = v;
+      }
+      
+      // collect cell button states (marked status)
+      const statusBtn = input.parentElement.querySelector('.cell-status-btn');
+      if (statusBtn && v) {
+        const key = `${p || part || 'default'}_${r}_${c}`;
+        data.cellStates[key] = statusBtn.classList.contains('marked');
       }
     });
     // include username if present
@@ -242,31 +270,46 @@
     const input = e.target;
     const v = (input.value || '').trim();
     const m = v.match(/^(\d+)\s*\/\s*(\d+)$/);
+    const td = input.closest('td');
+    
     if (!m) {
       input.style.background = '';
       input.style.color = '';
       input.title = '';
+      // remove cell border
+      if (td) td.classList.remove('cell-with-value');
       // hide star if any
       const starEl = input.parentElement.querySelector('.cell-star');
       if (starEl) starEl.style.display = 'none';
       scheduleSave();
       return;
     }
+    
     const correct = parseInt(m[1], 10);
     const total = parseInt(m[2], 10);
     if (isNaN(correct) || isNaN(total) || total <= 0) {
       input.style.background = '';
       input.style.color = '';
       input.title = 'Invalid numbers';
+      // remove cell border
+      if (td) td.classList.remove('cell-with-value');
+      // hide star if any
       const starEl = input.parentElement.querySelector('.cell-star');
       if (starEl) starEl.style.display = 'none';
       scheduleSave();
       return;
     }
+    
     const wrong = Math.max(0, total - correct);
     const ratio = Math.max(0, Math.min(1, correct / total));
     applyColor(input, ratio);
     input.title = `${correct}/${total} — wrong: ${wrong} — ${Math.round(ratio * 100)}%`;
+    
+    // show cell border for cells with values
+    if (td) {
+      td.classList.add('cell-with-value');
+    }
+    
     // show star when perfect
     const starEl = input.parentElement.querySelector('.cell-star');
     if (starEl) {
@@ -279,6 +322,21 @@
   function onCellBlur(e) {
     onCellInput(e);
     saveNow();
+  }
+
+  function onStatusBtnClick(e, input, td) {
+    e.preventDefault();
+    e.stopPropagation();
+    const btn = e.target;
+    const isMarked = btn.classList.toggle('marked');
+    
+    if (isMarked) {
+      td.classList.add('marked');
+    } else {
+      td.classList.remove('marked');
+    }
+    
+    scheduleSave();
   }
 
   function applyColor(el, ratio) {
@@ -317,6 +375,7 @@
       const obj = await res.json();
       const map = (obj && obj.passages) || {};
       const partsMap = (obj && obj.parts) || {};
+      const cellStates = (obj && obj.cellStates) || {};
       // load username if present
       if (obj && obj.username && typeof window.__setLoadedUserName === 'function') {
         window.__setLoadedUserName(obj.username);
@@ -337,6 +396,18 @@
         // trigger coloring
         const ev = { target: input };
         onCellInput(ev);
+        
+        // restore button marked state
+        if (v) {
+          const key = `${p || part || 'default'}_${r}_${c}`;
+          const isMarked = cellStates[key] || false;
+          const statusBtn = input.parentElement.querySelector('.cell-status-btn');
+          const td = input.closest('td');
+          if (isMarked && statusBtn && td) {
+            statusBtn.classList.add('marked');
+            td.classList.add('marked');
+          }
+        }
       });
     } catch (e) {
       console.warn('Failed to load progress', e);
