@@ -494,51 +494,24 @@
   const feelingInput = document.getElementById('feelingInput');
   if (!feelingInput) return;
 
-  let feelingTimer = null;
-  
   function getTodayKey() {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     return `feelings_${today}`;
   }
-
-  function saveFeelingToServer() {
-    const today = getTodayKey().replace('feelings_', '');
-    const feelingText = (feelingInput.value || '').trim();
-    const usernameEl = document.getElementById('usernameBox');
-    const username = (usernameEl && usernameEl.value) || 'Anonymous';
-
-    if (feelingTimer) clearTimeout(feelingTimer);
-    feelingTimer = setTimeout(async () => {
-      try {
-        const payload = {
-          date: today,
-          name: username,
-          feeling: feelingText
-        };
-        await fetch('/feeling', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        loadFeelingHistory();
-      } catch (e) {
-        console.warn('Failed to save feeling', e);
-      }
-    }, 800);
+  // UI helper for feeling save status
+  function setFeelingStatus(state, text) {
+    const el = document.getElementById('feelingSaveStatus');
+    if (!el) return;
+    el.classList.remove('saved', 'saving', 'error');
+    if (state) el.classList.add(state);
+    if (typeof text === 'string') el.textContent = text;
   }
 
-  feelingInput.addEventListener('input', saveFeelingToServer);
-  feelingInput.addEventListener('blur', () => {
-    if (feelingTimer) clearTimeout(feelingTimer);
-    saveFeelingToServer();
-  });
-
-  // Handle Enter key to save and update log immediately (use keydown for reliability)
+  // Handle Enter key to save and update log immediately
   feelingInput.addEventListener('keydown', async (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation();
-      if (feelingTimer) clearTimeout(feelingTimer);
 
       const today = getTodayKey().replace('feelings_', '');
       const feelingText = (feelingInput.value || '').trim();
@@ -554,19 +527,24 @@
       };
 
       try {
+        setFeelingStatus('saving', 'Saving…');
         const res = await fetch('/feeling', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
         if (res.ok) {
-          await loadFeelingHistory();
+            // optimistically prepend the new entry to history without reloading from server
+            appendFeelingToHistory(payload);
           feelingInput.value = '';
           feelingInput.blur();
+          setFeelingStatus('saved', 'Saved');
         } else {
+          setFeelingStatus('error', 'Save failed');
           console.warn('Failed to save feeling', await res.text());
         }
       } catch (err) {
+        setFeelingStatus('error', 'Save failed');
         console.warn('Failed to save feeling', err);
       }
     }
@@ -632,6 +610,47 @@
       console.warn('Failed to load feeling history', e);
     }
   };
+
+  // Optimistically append a new feeling entry to the top of the history UI
+  function appendFeelingToHistory(entry) {
+    try {
+      const historyLog = document.getElementById('history-log');
+      if (!historyLog) return;
+      // remove empty placeholder if present
+      const empty = historyLog.querySelector('.history-empty');
+      if (empty) empty.remove();
+
+      const dateObj = new Date(entry.date + 'T00:00:00');
+      const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+      const emoticon = getEmoticon(entry.feeling);
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'history-entry new-entry';
+      wrapper.style.animation = 'fadeInUp 0.45s ease-out both';
+      wrapper.innerHTML = `
+        <div class="history-date">
+          <span>${emoticon}</span>
+          <span>${formattedDate}</span>
+        </div>
+        <div class="history-name">${escapeHtml(entry.name)}</div>
+        <div class="history-feeling">"${escapeHtml(entry.feeling)}"</div>
+      `;
+      // prepend to top
+      if (historyLog.firstChild) historyLog.insertBefore(wrapper, historyLog.firstChild);
+      else historyLog.appendChild(wrapper);
+
+      // temporary highlight for positive feedback
+      wrapper.style.boxShadow = '0 8px 30px rgba(99,102,241,0.08)';
+      wrapper.style.border = '1.5px solid rgba(99,102,241,0.09)';
+      setTimeout(() => {
+        wrapper.style.boxShadow = '';
+        wrapper.style.border = '';
+      }, 2000);
+    } catch (e) {
+      // fallback: refresh later
+      console.warn('Failed to optimistically append feeling', e);
+    }
+  }
 
   function getEmoticon(feeling) {
     const lower = feeling.toLowerCase();
