@@ -585,14 +585,19 @@
       history.sort((a, b) => new Date(b.date) - new Date(a.date));
 
       historyLog.innerHTML = history.map((entry, idx) => {
-        const dateObj = new Date(entry.date + 'T00:00:00');
-        const formattedDate = dateObj.toLocaleDateString('en-US', { 
-          weekday: 'short', 
-          year: 'numeric', 
-          month: 'short', 
-          day: 'numeric' 
-        });
-        
+        // Use stored timestamp when available and display in UTC+7
+        const ts = entry.timestamp || (entry.date ? (entry.date + 'T00:00:00Z') : null);
+        const dateObj = ts ? new Date(ts) : new Date();
+        const formattedDate = dateObj.toLocaleString('en-GB', {
+          timeZone: 'Asia/Ho_Chi_Minh',
+          weekday: 'short',
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        }) + ' (UTC+7)';
         const emoticon = getEmoticon(entry.feeling);
         
         return `
@@ -620,8 +625,18 @@
       const empty = historyLog.querySelector('.history-empty');
       if (empty) empty.remove();
 
-      const dateObj = new Date(entry.date + 'T00:00:00');
-      const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+      const ts = entry.timestamp || (entry.date ? (entry.date + 'T00:00:00Z') : new Date().toISOString());
+      const dateObj = new Date(ts);
+      const formattedDate = dateObj.toLocaleString('en-GB', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }) + ' (UTC+7)';
       const emoticon = getEmoticon(entry.feeling);
 
       const wrapper = document.createElement('div');
