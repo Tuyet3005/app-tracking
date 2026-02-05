@@ -213,7 +213,9 @@
   // Debounced save: collect full state and POST to server
   let saveTimer = null;
   let lastSavedState = null;
+  let isLoaded = false; // becomes true after initial loadProgress() completes
   function scheduleSave() {
+    if (!isLoaded) return; // do not schedule saves before initial load
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(() => saveNow(), 600);
   }
@@ -221,6 +223,7 @@
   window.scheduleSave = scheduleSave;
   window.saveNow = saveNow;
   async function saveNow() {
+    if (!isLoaded) return; // don't save until initial load completes
     if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
     const payload = collectState();
     const payloadStr = JSON.stringify(payload);
@@ -377,60 +380,96 @@
     scheduleSave();
   }
 
+  // apply a progress object to the UI (used by initial load and polling)
+  function applyProgress(obj) {
+    const map = (obj && obj.passages) || {};
+    const partsMap = (obj && obj.parts) || {};
+    const cellStates = (obj && obj.cellStates) || {};
+    // load username if present
+    if (obj && obj.username && typeof window.__setLoadedUserName === 'function') {
+      window.__setLoadedUserName(obj.username);
+    }
+    document.querySelectorAll('input.practice-input').forEach(input => {
+      const part = input.getAttribute('data-part');
+      const p = input.getAttribute('data-passage');
+      const r = input.getAttribute('data-row');
+      const c = input.getAttribute('data-col');
+      let v = '';
+      if (part) {
+        v = (partsMap[part] && partsMap[part][r] && partsMap[part][r][c]) || '';
+      } else {
+        const pass = p || 'Passage 1';
+        v = (map[pass] && map[pass][r] && map[pass][r][c]) || '';
+      }
+      input.value = v;
+      // trigger coloring
+      const ev = { target: input };
+      onCellInput(ev);
+
+      // restore button marked state
+      if (v) {
+        const key = `${p || part || 'default'}_${r}_${c}`;
+        const isMarked = cellStates[key] || false;
+        const statusBtn = input.parentElement.querySelector('.cell-status-btn');
+        const td = input.closest('td');
+        if (isMarked && statusBtn && td) {
+          statusBtn.classList.add('marked');
+          td.classList.add('marked');
+        }
+      }
+    });
+    // set lastSavedState to loaded server state to avoid immediately re-saving
+    try {
+      lastSavedState = JSON.stringify(obj || {});
+    } catch (e) {
+      lastSavedState = null;
+    }
+  }
+
   // Load saved progress from server and populate inputs
   async function loadProgress() {
     try {
       const res = await fetch('/progress');
       if (!res.ok) return;
       const obj = await res.json();
-      const map = (obj && obj.passages) || {};
-      const partsMap = (obj && obj.parts) || {};
-      const cellStates = (obj && obj.cellStates) || {};
-      // load username if present
-      if (obj && obj.username && typeof window.__setLoadedUserName === 'function') {
-        window.__setLoadedUserName(obj.username);
-      }
-      document.querySelectorAll('input.practice-input').forEach(input => {
-        const part = input.getAttribute('data-part');
-        const p = input.getAttribute('data-passage');
-        const r = input.getAttribute('data-row');
-        const c = input.getAttribute('data-col');
-        let v = '';
-        if (part) {
-          v = (partsMap[part] && partsMap[part][r] && partsMap[part][r][c]) || '';
-        } else {
-          const pass = p || 'Passage 1';
-          v = (map[pass] && map[pass][r] && map[pass][r][c]) || '';
-        }
-        input.value = v;
-        // trigger coloring
-        const ev = { target: input };
-        onCellInput(ev);
-        
-        // restore button marked state
-        if (v) {
-          const key = `${p || part || 'default'}_${r}_${c}`;
-          const isMarked = cellStates[key] || false;
-          const statusBtn = input.parentElement.querySelector('.cell-status-btn');
-          const td = input.closest('td');
-          if (isMarked && statusBtn && td) {
-            statusBtn.classList.add('marked');
-            td.classList.add('marked');
-          }
-        }
-      });
-      // set lastSavedState to loaded server state to avoid immediately re-saving
-      try {
-        lastSavedState = JSON.stringify(obj || {});
-      } catch (e) {
-        lastSavedState = null;
-      }
+      applyProgress(obj);
     } catch (e) {
       console.warn('Failed to load progress', e);
     }
+    // mark loaded so autosaves can run
+    isLoaded = true;
   }
 
   loadProgress();
+
+  // Periodically poll for server-side changes and apply them when safe
+  const PROGRESS_POLL_INTERVAL = 30 * 1000; // 30s
+  async function pollProgressOnce() {
+    try {
+      const res = await fetch('/progress');
+      if (!res.ok) return;
+      const obj = await res.json();
+      const serverStr = JSON.stringify(obj || {});
+      // if server state equals our last saved state, nothing to do
+      if (lastSavedState === serverStr) return;
+      // if user has local unsaved changes (current != lastSavedState), avoid clobbering
+      const current = JSON.stringify(collectState());
+      if (current !== lastSavedState) return;
+      // safe to apply server state
+      applyProgress(obj);
+    } catch (e) {
+      // silently ignore polling errors
+    }
+  }
+
+  function startProgressPolling() {
+    setInterval(() => {
+      if (!isLoaded) return;
+      pollProgressOnce();
+    }, PROGRESS_POLL_INTERVAL);
+  }
+
+  startProgressPolling();
 })();
 
 // Feelings Cloud Widget - handle daily feelings
