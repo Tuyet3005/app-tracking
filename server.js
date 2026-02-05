@@ -71,7 +71,7 @@ app.post('/progress', async (req, res) => {
   // Try to write to Vercel Blob first
   if (blobClient && BLOB_TOKEN) {
     try {
-      await blobClient.put(BLOB_KEY_PROGRESS, payload, { token: BLOB_TOKEN, contentType: 'application/json', access: 'public' });
+      await blobClient.put(BLOB_KEY_PROGRESS, payload, { token: BLOB_TOKEN, contentType: 'application/json', access: 'public', allowOverwrite: true });
       return res.json({ ok: true });
     } catch (err) {
       console.warn('Blob write failed, falling back to fs:', err && err.message);
@@ -120,7 +120,7 @@ app.post('/feeling', async (req, res) => {
   const payload = JSON.stringify(feelings, null, 2);
   if (blobClient && BLOB_TOKEN) {
     try {
-      await blobClient.put(BLOB_KEY_FEELINGS, payload, { token: BLOB_TOKEN, contentType: 'application/json', access: 'public' });
+      await blobClient.put(BLOB_KEY_FEELINGS, payload, { token: BLOB_TOKEN, contentType: 'application/json', access: 'public', allowOverwrite: true });
       return res.json({ ok: true });
     } catch (err) {
       console.warn('Blob write failed, falling back to fs:', err && err.message);
