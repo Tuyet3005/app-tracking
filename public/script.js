@@ -110,8 +110,8 @@
           statusBtn.addEventListener('click', (e) => onStatusBtnClick(e, input, td));
           const star = document.createElement('span');
           star.className = 'cell-star';
-          // prettier SVG star so it's crisp and doesn't obscure input text
-          star.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" fill="#f4f402" stroke="#D1D100" stroke-width="0.2"/></svg>';
+          // use a small raster star image instead of inline SVG (18x18)
+          star.innerHTML = '<img src="/star.png" alt="star" style="width:18px;height:18px;display:block" />';
           wrap.appendChild(input);
           wrap.appendChild(statusBtn);
           wrap.appendChild(star);
@@ -206,7 +206,8 @@
         statusBtn.addEventListener('click', (e) => onStatusBtnClick(e, input, td));
         const star = document.createElement('span');
         star.className = 'cell-star';
-        star.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" fill="#FFFF00" stroke="#ffd700" stroke-width="0.2"/></svg>';
+        // use a small raster star image instead of inline SVG (18x18)
+        star.innerHTML = '<img src="/star.png" alt="star" style="width:18px;height:18px;display:block" />';
         wrap.appendChild(input);
         wrap.appendChild(statusBtn);
         wrap.appendChild(star);
@@ -339,7 +340,7 @@
     const readingEl = document.getElementById('readingTotals');
     if (readingEl) {
       const pct = readingTotal > 0 ? Math.round((readingCompleted / readingTotal) * 100) : 0;
-      readingEl.innerHTML = `completed ${readingCompleted}/${readingTotal} <span class="percent ${pct>=90? 'pulse':''}">${pct}%</span>`;
+      readingEl.innerHTML = `Completed ${readingCompleted}/${readingTotal} <span class="percent ${pct>=90? 'pulse':''}">${pct}%</span>`;
     }
 
     // listening totals: elements under #listening-container
@@ -366,7 +367,7 @@
     const listenEl = document.getElementById('listeningTotals');
     if (listenEl) {
       const pct2 = listenTotal > 0 ? Math.round((listenCompleted / listenTotal) * 100) : 0;
-      listenEl.innerHTML = `completed ${listenCompleted}/${listenTotal} <span class="percent ${pct2>=90? 'pulse':''}">${pct2}%</span>`;
+      listenEl.innerHTML = `Completed ${listenCompleted}/${listenTotal} <span class="percent ${pct2>=90? 'pulse':''}">${pct2}%</span>`;
     }
   }
 
@@ -581,46 +582,48 @@
     if (typeof text === 'string') el.textContent = text;
   }
 
-  // Handle Enter key to save and update log immediately
+  // Handle Ctrl/Cmd+Enter to save (allow Enter for newline in textarea)
   feelingInput.addEventListener('keydown', async (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      e.stopPropagation();
+    const isSubmit = (e.key === 'Enter' && (e.ctrlKey || e.metaKey));
+    if (!isSubmit) return; // otherwise allow newline
+    e.preventDefault();
+    e.stopPropagation();
 
-      const today = getTodayKey().replace('feelings_', '');
-      const feelingText = (feelingInput.value || '').trim();
-      const usernameEl = document.getElementById('usernameBox');
-      const username = (usernameEl && usernameEl.value) || 'Anonymous';
+    const today = getTodayKey().replace('feelings_', '');
+    const feelingText = (feelingInput.value || '').trim();
+    const usernameEl = document.getElementById('usernameBox');
+    const username = (usernameEl && usernameEl.value) || 'Anonymous';
 
-      if (!feelingText) return;
+    if (!feelingText) return;
 
-      const payload = {
-        date: today,
-        name: username,
-        feeling: feelingText
-      };
+    const payload = {
+      date: today,
+      name: username,
+      feeling: feelingText
+    };
 
-      try {
-        setFeelingStatus('saving', 'Saving…');
-        const res = await fetch('/feeling', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        if (res.ok) {
-            // optimistically prepend the new entry to history without reloading from server
-            appendFeelingToHistory(payload);
-          feelingInput.value = '';
-          feelingInput.blur();
-          setFeelingStatus('saved', 'Saved');
-        } else {
-          setFeelingStatus('error', 'Save failed');
-          console.warn('Failed to save feeling', await res.text());
-        }
-      } catch (err) {
+    try {
+      setFeelingStatus('saving', 'Saving…');
+      const res = await fetch('/feeling', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+          // server will return the saved entry (with timestamp) so we can append accurately
+          const json = await res.json().catch(() => null);
+          const entryToAppend = (json && json.entry) ? json.entry : payload;
+          appendFeelingToHistory(entryToAppend);
+        feelingInput.value = '';
+        feelingInput.blur();
+        setFeelingStatus('saved', 'Saved');
+      } else {
         setFeelingStatus('error', 'Save failed');
-        console.warn('Failed to save feeling', err);
+        console.warn('Failed to save feeling', await res.text());
       }
+    } catch (err) {
+      setFeelingStatus('error', 'Save failed');
+      console.warn('Failed to save feeling', err);
     }
   });
 
@@ -660,30 +663,27 @@
 
       historyLog.innerHTML = history.map((entry, idx) => {
         // Use stored timestamp when available and display in UTC+7
-        const ts = entry.timestamp || (entry.date ? (entry.date + 'T00:00:00Z') : null);
-        const dateObj = ts ? new Date(ts) : new Date();
-        const formattedDate = dateObj.toLocaleString('en-GB', {
-          timeZone: 'Asia/Ho_Chi_Minh',
-          weekday: 'short',
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false
-        }) + ' (UTC+7)';
+          const ts = entry.timestamp || (entry.date ? (entry.date + 'T00:00:00Z') : null);
+          const dateObj = ts ? new Date(ts) : new Date();
+          const weekday = dateObj.toLocaleDateString('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', weekday: 'short' });
+          const dateOnly = dateObj.toLocaleDateString('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' });
+          const formattedDate = `${weekday}, ${dateOnly}`;
         const emoticon = getEmoticon(entry.feeling);
-        
-        return `
-          <div class="history-entry" style="animation: fadeInUp 0.5s ease-out ${idx * 0.05}s both;">
-            <div class="history-date">
-              <span>${emoticon}</span>
-              <span>${formattedDate}</span>
+          return `
+            <div class="history-entry" data-ts="${entry.timestamp || ''}" style="animation: fadeInUp 0.5s ease-out ${idx * 0.05}s both;">
+              <div class="history-header">
+                <div class="history-left">
+                  <span class="history-emoticon">${emoticon}</span>
+                  <span class="history-date">${formattedDate}</span>
+                  <span class="history-user"> — ${escapeHtml(entry.name)}</span>
+                </div>
+                <div class="history-actions"><button class="feeling-delete-btn" data-ts="${entry.timestamp || ''}" aria-label="Delete feeling">
+                  <img src="/delete.png" alt="Delete" class="feeling-delete-icon" />
+                </button></div>
+              </div>
+              <div class="history-feeling">"${escapeHtml(entry.feeling).replace(/\n/g, '<br>')}"</div>
             </div>
-            <div class="history-name">${escapeHtml(entry.name)}</div>
-            <div class="history-feeling">"${escapeHtml(entry.feeling)}"</div>
-          </div>
-        `;
+          `;
       }).join('');
     } catch (e) {
       console.warn('Failed to load feeling history', e);
@@ -701,29 +701,33 @@
 
       const ts = entry.timestamp || (entry.date ? (entry.date + 'T00:00:00Z') : new Date().toISOString());
       const dateObj = new Date(ts);
-      const formattedDate = dateObj.toLocaleString('en-GB', {
-        timeZone: 'Asia/Ho_Chi_Minh',
-        weekday: 'short',
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-      }) + ' (UTC+7)';
+      const weekday = dateObj.toLocaleDateString('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', weekday: 'short' });
+      const dateOnly = dateObj.toLocaleDateString('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' });
+      const formattedDate = `${weekday}, ${dateOnly}`;
       const emoticon = getEmoticon(entry.feeling);
 
       const wrapper = document.createElement('div');
       wrapper.className = 'history-entry new-entry';
       wrapper.style.animation = 'fadeInUp 0.45s ease-out both';
       wrapper.innerHTML = `
-        <div class="history-date">
-          <span>${emoticon}</span>
-          <span>${formattedDate}</span>
+        <div class="history-header">
+          <div class="history-left">
+            <span class="history-emoticon">${emoticon}</span>
+            <span class="history-date">${formattedDate}</span>
+            <span class="history-user"> — ${escapeHtml(entry.name)}</span>
+          </div>
+          <div class="history-actions"></div>
         </div>
-        <div class="history-name">${escapeHtml(entry.name)}</div>
-        <div class="history-feeling">"${escapeHtml(entry.feeling)}"</div>
+        <div class="history-feeling">"${escapeHtml(entry.feeling).replace(/\n/g, '<br>')}"</div>
       `;
+      // add delete action button into the header actions container
+      const actions = wrapper.querySelector('.history-actions');
+      const del = document.createElement('button');
+      del.className = 'feeling-delete-btn';
+      del.setAttribute('data-ts', entry.timestamp || '');
+      del.setAttribute('aria-label', 'Delete feeling');
+      del.innerHTML = '<img src="/delete.png" alt="Delete" class="feeling-delete-icon" />';
+      if (actions) actions.appendChild(del);
       // prepend to top
       if (historyLog.firstChild) historyLog.insertBefore(wrapper, historyLog.firstChild);
       else historyLog.appendChild(wrapper);
@@ -740,6 +744,37 @@
       console.warn('Failed to optimistically append feeling', e);
     }
   }
+
+  // delegated handler for delete buttons in history log
+  document.addEventListener('click', async (ev) => {
+    const btn = ev.target.closest && ev.target.closest('.feeling-delete-btn');
+    if (!btn) return;
+    ev.preventDefault();
+    const ts = btn.getAttribute('data-ts');
+    if (!ts) return;
+    try {
+      btn.disabled = true;
+      btn.classList.add('deleting');
+      const res = await fetch('/feeling', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timestamp: ts })
+      });
+      if (res.ok) {
+        // remove the entry element from DOM
+        const entryEl = btn.closest('.history-entry');
+        if (entryEl) entryEl.remove();
+      } else {
+        console.warn('Failed to delete feeling', await res.text());
+        btn.disabled = false;
+        btn.classList.remove('deleting');
+      }
+    } catch (err) {
+      console.warn('Failed to delete feeling', err);
+      btn.disabled = false;
+      btn.classList.remove('deleting');
+    }
+  });
 
   function getEmoticon(feeling) {
     const lower = feeling.toLowerCase();

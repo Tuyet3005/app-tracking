@@ -75,6 +75,22 @@ app.post('/feeling', async (req, res) => {
   const payload = JSON.stringify(feelings, null, 2);
   await writeFile(BLOB_KEY_FEELINGS, payload);
 
+  res.json({ ok: true, entry: { date, name, feeling, timestamp } });
+});
+
+// Delete a feeling by timestamp
+app.delete('/feeling', async (req, res) => {
+  const ts = (req.body && req.body.timestamp) || req.query.timestamp;
+  if (!ts) return res.status(400).json({ error: 'timestamp is required' });
+
+  const feelings = JSON.parse(await readFile(BLOB_KEY_FEELINGS));
+  const idx = feelings.findIndex(f => f.timestamp === ts);
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+
+  feelings.splice(idx, 1);
+  const payload = JSON.stringify(feelings, null, 2);
+  await writeFile(BLOB_KEY_FEELINGS, payload);
+
   res.json({ ok: true });
 });
 
