@@ -225,7 +225,7 @@
   function scheduleSave() {
     if (!isLoaded) return; // do not schedule saves before initial load
     if (saveTimer) clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => saveNow(), 600);
+    saveTimer = setTimeout(() => saveNow(), 1000);
   }
   // expose scheduleSave/saveNow to global so other components (username box) can trigger saves
   window.scheduleSave = scheduleSave;
@@ -309,7 +309,6 @@
       // hide star if any
       const starEl = input.parentElement.querySelector('.cell-star');
       if (starEl) starEl.style.display = 'none';
-      scheduleSave();
       return;
     }
     
@@ -324,7 +323,6 @@
       // hide star if any
       const starEl = input.parentElement.querySelector('.cell-star');
       if (starEl) starEl.style.display = 'none';
-      scheduleSave();
       return;
     }
     
@@ -344,7 +342,6 @@
       if (correct === total && total > 0) starEl.style.display = 'block';
       else starEl.style.display = 'none';
     }
-    scheduleSave();
   }
 
   function onCellBlur(e) {
@@ -391,8 +388,6 @@
       const starEl = input.parentElement.querySelector('.cell-star');
       if (starEl) starEl.style.display = 'none';
     });
-    // Save cleared state to server
-    scheduleSave();
   }
 
   // apply a progress object to the UI (used by initial load and polling)

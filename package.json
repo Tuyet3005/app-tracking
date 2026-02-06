@@ -4,11 +4,15 @@
   "description": "Simple Node app that echoes input text",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js -i *.json"
   },
   "dependencies": {
     "@vercel/blob": "^2.1.0",
-    "express": "^4.18.2",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
   }
 }
