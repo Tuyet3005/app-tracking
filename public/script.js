@@ -225,7 +225,7 @@
   function scheduleSave() {
     if (!isLoaded) return; // do not schedule saves before initial load
     if (saveTimer) clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => saveNow(), 1000);
+    saveTimer = setTimeout(() => saveNow(), 200);
   }
   // expose scheduleSave/saveNow to global so other components (username box) can trigger saves
   window.scheduleSave = scheduleSave;

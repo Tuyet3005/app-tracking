@@ -8,17 +8,7 @@ try {
 } catch (e) {
   // dotenv is optional in environments where env vars are provided externally
 }
-let blobClient;
-try {
-  // Use Vercel Blob SDK when available and token is configured
-  const { put, head } = require('@vercel/blob');
-  blobClient = { put, head };
-} catch (e) {
-  console.warn('Vercel Blob SDK not available, falling back to file system storage.');
-  console.warn(e);
-  // fall back to file system when SDK is not available
-  blobClient = null;
-}
+const blobClient = require('@tigrisdata/storage');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -26,19 +16,12 @@ const port = process.env.PORT || 3000;
 const BLOB_KEY_PROGRESS = 'progress.json';
 const BLOB_KEY_FEELINGS = 'feelings.json';
 
-const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN || process.env.VERCEL_BLOB_TOKEN || process.env.BLOB_TOKEN;
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 async function writeFile(filePath, data) {
-  await blobClient.put(filePath, data, {
-    token: BLOB_TOKEN,
-    contentType: 'application/json',
-    access: 'public',
-    allowOverwrite: true
-  });
+  await blobClient.put(filePath, data);
 
   for (let i = 0; i < 5; i++) {
     try {
@@ -54,11 +37,8 @@ async function writeFile(filePath, data) {
 }
 
 async function readFile(filePath) {
-  const meta = await blobClient.head(filePath, { token: BLOB_TOKEN });
-  const fetchFn = global.fetch || require('undici').fetch;
-  const r = await fetchFn(meta.downloadUrl);
-  const text = await r.text();
-  return text;
+  const r = await blobClient.get(filePath, 'string');
+  return r.data;
 }
 
 app.post('/echo', (req, res) => {
