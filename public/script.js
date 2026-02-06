@@ -51,6 +51,16 @@
     tspan.style.fontWeight = '600';
     tspan.textContent = title;
     h.appendChild(tspan);
+    // per-table stats (completed correct/total)
+    const stats = document.createElement('span');
+    stats.className = 'table-stats';
+    stats.textContent = '0/0';
+    stats.dataset.passage = title;
+    stats.style.marginLeft = '8px';
+    stats.style.fontWeight = '700';
+    stats.style.fontSize = '0.85rem';
+    stats.style.color = '#475569';
+    h.appendChild(stats);
     wrapper.appendChild(h);
 
     const table = document.createElement('table');
@@ -139,6 +149,15 @@
     tspan.style.fontWeight = '600';
     tspan.textContent = title;
     h.appendChild(tspan);
+    const stats = document.createElement('span');
+    stats.className = 'table-stats';
+    stats.textContent = '0/0';
+    stats.dataset.part = title;
+    stats.style.marginLeft = '8px';
+    stats.style.fontWeight = '700';
+    stats.style.fontSize = '0.85rem';
+    stats.style.color = '#475569';
+    h.appendChild(stats);
     wrapper.appendChild(h);
 
     const table = document.createElement('table');
@@ -294,6 +313,63 @@
     return data;
   }
 
+  // Update per-table and overall totals for reading/listening
+  function updateTotals() {
+    // reading totals (only practice-container)
+    let readingCompleted = 0, readingTotal = 0;
+    const practiceContainerEl = document.getElementById('practice-container');
+    if (practiceContainerEl) {
+      practiceContainerEl.querySelectorAll('.practice-wrapper').forEach(wrapper => {
+        const tableStats = wrapper.querySelector('.table-stats');
+        const inputs = wrapper.querySelectorAll('input.practice-input');
+        const tableTotal = inputs.length;
+        let tableCompleted = 0;
+        inputs.forEach(input => {
+          const v = (input.value || '').trim();
+          if (v) tableCompleted += 1;
+        });
+        if (tableStats) {
+          const pctTable = tableTotal > 0 ? Math.round((tableCompleted / tableTotal) * 100) : 0;
+          tableStats.innerHTML = `${tableCompleted}/${tableTotal} <span class="percent ${pctTable>=90? 'pulse':''}">${pctTable}%</span>`;
+        }
+        readingCompleted += tableCompleted;
+        readingTotal += tableTotal;
+      });
+    }
+    const readingEl = document.getElementById('readingTotals');
+    if (readingEl) {
+      const pct = readingTotal > 0 ? Math.round((readingCompleted / readingTotal) * 100) : 0;
+      readingEl.innerHTML = `completed ${readingCompleted}/${readingTotal} <span class="percent ${pct>=90? 'pulse':''}">${pct}%</span>`;
+    }
+
+    // listening totals: elements under #listening-container
+    let listenCompleted = 0, listenTotal = 0;
+    const listeningContainer = document.getElementById('listening-container');
+    if (listeningContainer) {
+      listeningContainer.querySelectorAll('.practice-wrapper').forEach(wrapper => {
+        const stats = wrapper.querySelector('.table-stats');
+        const inputs = wrapper.querySelectorAll('input.practice-input');
+        const tableTotal = inputs.length;
+        let tableCompleted = 0;
+        inputs.forEach(input => {
+          const v = (input.value || '').trim();
+          if (v) tableCompleted += 1;
+        });
+        if (stats) {
+          const pctTable = tableTotal > 0 ? Math.round((tableCompleted / tableTotal) * 100) : 0;
+          stats.innerHTML = `${tableCompleted}/${tableTotal} <span class="percent ${pctTable>=90? 'pulse':''}">${pctTable}%</span>`;
+        }
+        listenCompleted += tableCompleted;
+        listenTotal += tableTotal;
+      });
+    }
+    const listenEl = document.getElementById('listeningTotals');
+    if (listenEl) {
+      const pct2 = listenTotal > 0 ? Math.round((listenCompleted / listenTotal) * 100) : 0;
+      listenEl.innerHTML = `completed ${listenCompleted}/${listenTotal} <span class="percent ${pct2>=90? 'pulse':''}">${pct2}%</span>`;
+    }
+  }
+
   function onCellInput(e) {
     const input = e.target;
     const v = (input.value || '').trim();
@@ -362,6 +438,8 @@
     }
     
     scheduleSave();
+    // update totals after cell changes
+    try { updateTotals(); } catch (err) {}
   }
 
   function applyColor(el, ratio) {
@@ -434,8 +512,9 @@
     } catch (e) {
       lastSavedState = null;
     }
-    // reflect saved status in UI
+    // reflect saved status in UI and update totals
     try { setProgressStatus('saved', 'Saved'); } catch (e) {}
+    try { updateTotals(); } catch (e) {}
   }
 
   // Load saved progress from server and populate inputs
