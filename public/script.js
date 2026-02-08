@@ -422,7 +422,30 @@
   }
 
   function onCellBlur(e) {
+    const input = e.target;
+    const prevValue = input.getAttribute('data-prev-value') || '';
+    const currentValue = (input.value || '').trim();
+    
     onCellInput(e);
+    
+    // Mark today as active if user entered a valid value (not 0/0 or empty)
+    if (currentValue && currentValue !== '0/0' && currentValue !== prevValue) {
+      const match = currentValue.match(/^(\d+)\s*\/\s*(\d+)$/);
+      if (match) {
+        const correct = parseInt(match[1], 10);
+        const total = parseInt(match[2], 10);
+        // Mark active if it's a valid entry (not just 0/0)
+        if (total > 0 && (correct > 0 || total > 0)) {
+          if (typeof window.markTodayActive === 'function') {
+            window.markTodayActive();
+          }
+        }
+      }
+    }
+    
+    // Store current value for next comparison
+    input.setAttribute('data-prev-value', currentValue);
+    
     saveNow();
   }
 
@@ -491,6 +514,8 @@
         v = (map[pass] && map[pass][r] && map[pass][r][c]) || '';
       }
       input.value = v;
+      // Store initial value for activity tracking
+      input.setAttribute('data-prev-value', v);
       // trigger coloring
       const ev = { target: input };
       onCellInput(ev);
@@ -1131,4 +1156,205 @@
   todoListCompleted.addEventListener('dblclick', handleTodoDoubleClick);
 
   loadTodos();
+})();
+
+// Progress Calendar Widget - track daily activity
+(() => {
+  const calendarGrid = document.getElementById('calendarGrid');
+  const calendarMonth = document.getElementById('calendarMonth');
+  const prevMonthBtn = document.getElementById('prevMonthBtn');
+  const nextMonthBtn = document.getElementById('nextMonthBtn');
+  
+  if (!calendarGrid) return;
+
+  let currentDate = new Date();
+  let activeDays = new Set(); // Store active dates in YYYY-MM-DD format
+
+  // Load activity data from backend
+  async function loadActivityData() {
+    try {
+      const res = await fetch('/activity');
+      if (res.ok) {
+        const data = await res.json();
+        activeDays = new Set(data.activeDays || []);
+        console.log('Loaded activity data from storage:', data);
+      }
+    } catch (e) {
+      console.warn('Failed to load activity data', e);
+    }
+    // Always render calendar even if data fetch fails
+    renderCalendar();
+  }
+
+  // Save activity data to backend
+  async function saveActivityData() {
+    try {
+      const dataToSave = Array.from(activeDays);
+      console.log('Saving activity data:', dataToSave);
+      const res = await fetch('/activity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activeDays: dataToSave })
+      });
+      if (res.ok) {
+        console.log('Activity data saved successfully');
+      } else {
+        console.error('Failed to save activity data, status:', res.status);
+      }
+    } catch (e) {
+      console.warn('Failed to save activity data', e);
+    }
+  }
+
+  // Mark today as active (called when user updates reading/listening)
+  window.markTodayActive = function() {
+    const today = new Date();
+    const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    console.log('Marking day as active:', dateKey);
+    if (!activeDays.has(dateKey)) {
+      activeDays.add(dateKey);
+      console.log('New active day added. Total active days:', activeDays.size);
+      saveActivityData();
+      renderCalendar();
+    } else {
+      console.log('Day already marked as active');
+    }
+  };
+
+  function renderCalendar() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    
+    // Update header
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'];
+    calendarMonth.textContent = `${monthNames[month]} ${year}`;
+
+    // Clear grid
+    calendarGrid.innerHTML = '';
+
+    // Add day headers
+    const dayHeaders = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    dayHeaders.forEach(day => {
+      const header = document.createElement('div');
+      header.className = 'calendar-day-header';
+      header.textContent = day;
+      calendarGrid.appendChild(header);
+    });
+
+    // Get first day of month (0 = Sunday, 1 = Monday, etc.)
+    const firstDay = new Date(year, month, 1).getDay();
+    // Convert to Monday-first (0 = Monday, 6 = Sunday)
+    const firstDayMon = firstDay === 0 ? 6 : firstDay - 1;
+
+    // Get last day of month
+    const lastDate = new Date(year, month + 1, 0).getDate();
+    
+    // Get last day of previous month
+    const prevMonthLastDate = new Date(year, month, 0).getDate();
+
+    // Add previous month days
+    for (let i = firstDayMon - 1; i >= 0; i--) {
+      const day = document.createElement('div');
+      day.className = 'calendar-day other-month';
+      day.textContent = prevMonthLastDate - i;
+      calendarGrid.appendChild(day);
+    }
+
+    // Add current month days
+    const today = new Date();
+    const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+    
+    for (let date = 1; date <= lastDate; date++) {
+      const day = document.createElement('div');
+      day.className = 'calendar-day';
+      day.textContent = date;
+
+      // Store date key for click handling
+      const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+      day.setAttribute('data-date', dateKey);
+
+      // Check if today
+      if (isCurrentMonth && date === today.getDate()) {
+        day.classList.add('today');
+      }
+
+      // Check if active day
+      if (activeDays.has(dateKey)) {
+        day.classList.add('active');
+      }
+
+      calendarGrid.appendChild(day);
+    }
+
+    // Add next month days to fill the grid
+    const totalCells = calendarGrid.children.length - 7; // Subtract day headers
+    const remainingCells = (Math.ceil(totalCells / 7) * 7) - totalCells;
+    for (let date = 1; date <= remainingCells; date++) {
+      const day = document.createElement('div');
+      day.className = 'calendar-day other-month';
+      day.textContent = date;
+      calendarGrid.appendChild(day);
+    }
+
+    // Update stats
+    updateStats();
+  }
+
+  function updateStats() {
+    const activeDaysCountEl = document.getElementById('activeDaysCount');
+    if (activeDaysCountEl) {
+      activeDaysCountEl.textContent = activeDays.size;
+    }
+  }
+
+  // Navigation
+  if (prevMonthBtn) {
+    prevMonthBtn.addEventListener('click', () => {
+      currentDate.setMonth(currentDate.getMonth() - 1);
+      renderCalendar();
+    });
+  }
+
+  if (nextMonthBtn) {
+    nextMonthBtn.addEventListener('click', () => {
+      currentDate.setMonth(currentDate.getMonth() + 1);
+      renderCalendar();
+    });
+  }
+
+  // Double-click to toggle active day
+  if (calendarGrid) {
+    calendarGrid.addEventListener('dblclick', (e) => {
+      const dayElement = e.target;
+      
+      // Only process clicks on calendar days (not headers or other-month days)
+      if (!dayElement.classList.contains('calendar-day') || 
+          dayElement.classList.contains('calendar-day-header') ||
+          dayElement.classList.contains('other-month')) {
+        return;
+      }
+
+      const dateKey = dayElement.getAttribute('data-date');
+      if (!dateKey) return;
+
+      // Toggle active state
+      if (activeDays.has(dateKey)) {
+        activeDays.delete(dateKey);
+        console.log('Removed active day:', dateKey);
+      } else {
+        activeDays.add(dateKey);
+        console.log('Added active day:', dateKey);
+      }
+
+      console.log('Total active days:', activeDays.size);
+      
+      // Save and re-render
+      saveActivityData();
+      renderCalendar();
+    });
+  }
+
+  // Initial render
+  loadActivityData();
 })();

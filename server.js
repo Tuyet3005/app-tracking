@@ -17,6 +17,7 @@ const BLOB_KEY_PROGRESS = 'progress.json';
 const BLOB_KEY_FEELINGS = 'feelings.json';
 const BLOB_KEY_NOTES = 'notes.json';
 const BLOB_KEY_TODOS = 'todo.json';
+const BLOB_KEY_ACTIVITY = 'daybyday.json';
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -168,6 +169,37 @@ app.get('/todos', async (req, res) => {
     console.log('No todos file found, returning empty array');
     // Return empty todos if file doesn't exist yet
     return res.json({ todos: [], lastModified: null });
+  }
+});
+
+// Save activity data
+app.post('/activity', async (req, res) => {
+  try {
+    const { activeDays } = req.body;
+    const payload = {
+      activeDays: activeDays || [],
+      lastModified: new Date().toISOString()
+    };
+    console.log('Received activity data to save:', payload);
+    await writeFile(BLOB_KEY_ACTIVITY, JSON.stringify(payload, null, 2));
+    console.log('Activity data saved successfully');
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Failed to save activity data:', err);
+    res.status(500).json({ error: 'Failed to save activity data' });
+  }
+});
+
+// Get activity data
+app.get('/activity', async (req, res) => {
+  try {
+    const data = await readFile(BLOB_KEY_ACTIVITY);
+    const parsed = JSON.parse(data);
+    console.log('Loaded activity data from storage:', parsed);
+    return res.json(parsed);
+  } catch (err) {
+    console.log('No activity file found, returning empty array');
+    return res.json({ activeDays: [], lastModified: null });
   }
 });
 
