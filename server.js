@@ -15,6 +15,8 @@ const port = process.env.PORT || 3000;
 
 const BLOB_KEY_PROGRESS = 'progress.json';
 const BLOB_KEY_FEELINGS = 'feelings.json';
+const BLOB_KEY_NOTES = 'notes.json';
+const BLOB_KEY_TODOS = 'todo.json';
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -107,6 +109,66 @@ app.get('/feeling', async (req, res) => {
 // Get all feelings history
 app.get('/feelings/history', async (req, res) => {
   return res.json(JSON.parse(await readFile(BLOB_KEY_FEELINGS)));
+});
+
+// Save notes
+app.post('/notes', async (req, res) => {
+  const { notes } = req.body;
+  const data = { notes: notes || '', lastModified: new Date().toISOString() };
+  const payload = JSON.stringify(data, null, 2);
+  
+  try {
+    await writeFile(BLOB_KEY_NOTES, payload);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Failed to save notes:', err);
+    res.status(500).json({ error: 'Failed to save notes' });
+  }
+});
+
+// Get notes
+app.get('/notes', async (req, res) => {
+  try {
+    const data = await readFile(BLOB_KEY_NOTES);
+    return res.json(JSON.parse(data));
+  } catch (err) {
+    // Return empty notes if file doesn't exist yet
+    return res.json({ notes: '', lastModified: null });
+  }
+});
+
+// Save todos
+app.post('/todos', async (req, res) => {
+  const { todos } = req.body;
+  console.log('Received todos to save:', todos);
+  const data = { 
+    todos: Array.isArray(todos) ? todos : [], 
+    lastModified: new Date().toISOString() 
+  };
+  const payload = JSON.stringify(data, null, 2);
+  
+  try {
+    await writeFile(BLOB_KEY_TODOS, payload);
+    console.log('Todos saved successfully');
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Failed to save todos:', err);
+    res.status(500).json({ error: 'Failed to save todos' });
+  }
+});
+
+// Get todos
+app.get('/todos', async (req, res) => {
+  try {
+    const data = await readFile(BLOB_KEY_TODOS);
+    const parsed = JSON.parse(data);
+    console.log('Loaded todos from storage:', parsed);
+    return res.json(parsed);
+  } catch (err) {
+    console.log('No todos file found, returning empty array');
+    // Return empty todos if file doesn't exist yet
+    return res.json({ todos: [], lastModified: null });
+  }
 });
 
 app.listen(port, () => {

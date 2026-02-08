@@ -569,6 +569,39 @@
   const feelingInput = document.getElementById('feelingInput');
   if (!feelingInput) return;
 
+  // Cloud collapse/expand functionality
+  const cloudWidget = document.getElementById('feeling-cloud');
+  const cloudImg = document.getElementById('cloudImg');
+  const minimizeBtn = document.getElementById('cloudMinimizeBtn');
+  
+  // Check localStorage for saved state
+  const savedCollapsedState = localStorage.getItem('cloudCollapsed');
+  if (savedCollapsedState === 'true') {
+    cloudWidget.classList.add('collapsed');
+  }
+
+  // Minimize button click handler
+  if (minimizeBtn) {
+    minimizeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      cloudWidget.classList.add('collapsed');
+      localStorage.setItem('cloudCollapsed', 'true');
+    });
+  }
+
+  // Cloud image click handler (when collapsed, expand it)
+  if (cloudImg) {
+    cloudImg.addEventListener('click', (e) => {
+      if (cloudWidget.classList.contains('collapsed')) {
+        e.stopPropagation();
+        cloudWidget.classList.remove('collapsed');
+        localStorage.setItem('cloudCollapsed', 'false');
+        // Focus on textarea after expanding
+        setTimeout(() => feelingInput.focus(), 200);
+      }
+    });
+  }
+
   function getTodayKey() {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     return `feelings_${today}`;
@@ -807,4 +840,295 @@
 
   loadTodayFeeling();
   loadFeelingHistory();
+})();
+
+// Notes Widget - handle user notes with auto-save
+(() => {
+  const notesInput = document.getElementById('notesInput');
+  if (!notesInput) return;
+
+  let notesTimer = null;
+
+  function setNotesStatus(state, text) {
+    const el = document.getElementById('notesSaveStatus');
+    if (!el) return;
+    el.classList.remove('saved', 'saving', 'error');
+    if (state) el.classList.add(state);
+    if (typeof text === 'string') el.textContent = text;
+  }
+
+  // Auto-save notes when user stops typing
+  notesInput.addEventListener('input', () => {
+    setNotesStatus('saving', 'Saving…');
+    if (notesTimer) clearTimeout(notesTimer);
+    notesTimer = setTimeout(async () => {
+      await saveNotes();
+    }, 1000); // Save after 1 second of no typing
+  });
+
+  async function saveNotes() {
+    const notesText = notesInput.value || '';
+    try {
+      const res = await fetch('/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: notesText })
+      });
+      if (res.ok) {
+        setNotesStatus('saved', 'Saved ✓');
+        setTimeout(() => setNotesStatus('', ''), 2000);
+      } else {
+        setNotesStatus('error', 'Save failed');
+        console.warn('Failed to save notes', await res.text());
+      }
+    } catch (err) {
+      setNotesStatus('error', 'Save failed');
+      console.warn('Failed to save notes', err);
+    }
+  }
+
+  // Load notes on page load
+  async function loadNotes() {
+    try {
+      const res = await fetch('/notes');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.notes !== undefined) {
+          notesInput.value = data.notes;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load notes', e);
+    }
+  }
+
+  loadNotes();
+})();
+
+// To-Do List Widget - handle todo items with auto-save
+(() => {
+  const todoInput = document.getElementById('todoInput');
+  const addTodoBtn = document.getElementById('addTodoBtn');
+  const todoListActive = document.getElementById('todoListActive');
+  const todoListCompleted = document.getElementById('todoListCompleted');
+  if (!todoInput || !addTodoBtn || !todoListActive || !todoListCompleted) return;
+
+  let todos = [];
+
+  function setTodoStatus(state, text) {
+    const el = document.getElementById('todoSaveStatus');
+    if (!el) return;
+    el.classList.remove('saved', 'saving', 'error');
+    if (state) el.classList.add(state);
+    if (typeof text === 'string') el.textContent = text;
+  }
+
+  function renderTodos() {
+    const activeTodos = todos.filter(t => !t.completed);
+    const completedTodos = todos.filter(t => t.completed);
+
+    // Render active todos
+    if (activeTodos.length === 0) {
+      todoListActive.innerHTML = '<div class="todo-empty">No active tasks ✨</div>';
+    } else {
+      todoListActive.innerHTML = activeTodos.map((todo) => {
+        const dateStr = formatDate(todo.createdAt);
+        return `
+          <div class="todo-item" data-id="${todo.id}">
+            <div class="todo-checkbox" data-id="${todo.id}"></div>
+            <div class="todo-text">${escapeHtml(todo.text)}</div>
+            <div class="todo-date">${dateStr}</div>
+            <button class="todo-delete" data-id="${todo.id}">
+              <img src="/delete.png" alt="Delete" class="todo-delete-icon" />
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Render completed todos
+    if (completedTodos.length === 0) {
+      todoListCompleted.innerHTML = '<div class="todo-empty">No completed tasks</div>';
+    } else {
+      todoListCompleted.innerHTML = completedTodos.map((todo) => {
+        const dateStr = formatDate(todo.createdAt);
+        return `
+          <div class="todo-item completed" data-id="${todo.id}">
+            <div class="todo-checkbox" data-id="${todo.id}"></div>
+            <div class="todo-text">${escapeHtml(todo.text)}</div>
+            <div class="todo-date">${dateStr}</div>
+            <button class="todo-delete" data-id="${todo.id}">
+              <img src="/delete.png" alt="Delete" class="todo-delete-icon" />
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  function formatDate(isoString) {
+    if (!isoString) return 'N/A';
+    try {
+      const date = new Date(isoString);
+      if (isNaN(date.getTime())) return 'N/A';
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = String(date.getFullYear()).slice(-2);
+      return `${day}/${month}/${year}`;
+    } catch (e) {
+      return 'N/A';
+    }
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  async function saveTodos() {
+    try {
+      setTodoStatus('saving', 'Saving…');
+      console.log('Saving todos:', todos);
+      const res = await fetch('/todos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ todos })
+      });
+      if (res.ok) {
+        const result = await res.json();
+        console.log('Save result:', result);
+        setTodoStatus('saved', 'Saved ✓');
+        setTimeout(() => setTodoStatus('', ''), 2000);
+      } else {
+        setTodoStatus('error', 'Save failed');
+        console.warn('Failed to save todos', await res.text());
+      }
+    } catch (err) {
+      setTodoStatus('error', 'Save failed');
+      console.warn('Failed to save todos', err);
+    }
+  }
+
+  async function loadTodos() {
+    try {
+      const res = await fetch('/todos');
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Loaded todos data:', data);
+        if (data && Array.isArray(data.todos)) {
+          todos = data.todos;
+          // Ensure all todos have createdAt
+          todos = todos.map(todo => ({
+            ...todo,
+            createdAt: todo.createdAt || new Date().toISOString()
+          }));
+          console.log('Todos after load:', todos);
+          renderTodos();
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load todos', e);
+    }
+  }
+
+  function addTodo() {
+    const text = todoInput.value.trim();
+    if (!text) return;
+
+    const newTodo = {
+      id: Date.now().toString(),
+      text: text,
+      completed: false,
+      createdAt: new Date().toISOString()
+    };
+
+    todos.push(newTodo);
+    todoInput.value = '';
+    renderTodos();
+    saveTodos();
+  }
+
+  // Add todo on button click
+  addTodoBtn.addEventListener('click', addTodo);
+
+  // Add todo on Enter key
+  todoInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTodo();
+    }
+  });
+
+  // Toggle complete and delete using event delegation on both lists
+  function handleTodoClick(e) {
+    const checkbox = e.target.closest('.todo-checkbox');
+    const deleteBtn = e.target.closest('.todo-delete');
+    const todoText = e.target.closest('.todo-text');
+
+    if (checkbox) {
+      const id = checkbox.getAttribute('data-id');
+      const todo = todos.find(t => t.id === id);
+      if (todo) {
+        todo.completed = !todo.completed;
+        renderTodos();
+        saveTodos();
+      }
+    } else if (deleteBtn) {
+      const id = deleteBtn.getAttribute('data-id');
+      todos = todos.filter(t => t.id !== id);
+      renderTodos();
+      saveTodos();
+    }
+  }
+
+  // Handle double click to edit todo text
+  function handleTodoDoubleClick(e) {
+    const todoText = e.target.closest('.todo-text');
+    if (!todoText) return;
+
+    const id = todoText.closest('.todo-item').getAttribute('data-id');
+    const todo = todos.find(t => t.id === id);
+    if (!todo) return;
+
+    // Create input element
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'todo-edit-input';
+    input.value = todo.text;
+
+    // Replace text with input
+    const todoItem = todoText.closest('.todo-item');
+    todoText.replaceWith(input);
+    input.focus();
+    input.select();
+
+    // Save on Enter or blur
+    function saveEdit() {
+      const newText = input.value.trim();
+      if (newText && newText !== todo.text) {
+        todo.text = newText;
+        saveTodos();
+      }
+      renderTodos();
+    }
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        saveEdit();
+      } else if (e.key === 'Escape') {
+        renderTodos(); // Cancel edit
+      }
+    });
+
+    input.addEventListener('blur', saveEdit);
+  }
+
+  todoListActive.addEventListener('click', handleTodoClick);
+  todoListCompleted.addEventListener('click', handleTodoClick);
+  todoListActive.addEventListener('dblclick', handleTodoDoubleClick);
+  todoListCompleted.addEventListener('dblclick', handleTodoDoubleClick);
+
+  loadTodos();
 })();
