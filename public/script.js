@@ -716,8 +716,12 @@
         return;
       }
 
-      // Sort by date descending (newest first)
-      history.sort((a, b) => new Date(b.date) - new Date(a.date));
+      // Sort by timestamp/date descending (newest first)
+      history.sort((a, b) => {
+        const aTime = new Date(a.timestamp || a.date);
+        const bTime = new Date(b.timestamp || b.date);
+        return bTime - aTime;
+      });
 
       historyLog.innerHTML = history.map((entry, idx) => {
         // Use stored timestamp when available and display in UTC+7
