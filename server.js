@@ -97,6 +97,22 @@ app.delete('/feeling', async (req, res) => {
   res.json({ ok: true });
 });
 
+// Update love status for a feeling
+app.post('/feeling/love', async (req, res) => {
+  const { timestamp, loved } = req.body;
+  if (!timestamp) return res.status(400).json({ error: 'timestamp is required' });
+
+  const feelings = JSON.parse(await readFile(BLOB_KEY_FEELINGS));
+  const entry = feelings.find(f => f.timestamp === timestamp);
+  if (!entry) return res.status(404).json({ error: 'Not found' });
+
+  entry.loved = loved;
+  const payload = JSON.stringify(feelings, null, 2);
+  await writeFile(BLOB_KEY_FEELINGS, payload);
+
+  res.json({ ok: true, loved: entry.loved });
+});
+
 // Get feeling for a specific date
 app.get('/feeling', async (req, res) => {
   const { date } = req.query;

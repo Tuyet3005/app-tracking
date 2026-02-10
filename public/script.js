@@ -731,6 +731,8 @@
           const dateOnly = dateObj.toLocaleDateString('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' });
           const formattedDate = `${weekday}, ${dateOnly}`;
         const emoticon = getEmoticon(entry.feeling);
+        const isLoved = entry.loved ? 'loved' : '';
+        const heartIcon = entry.loved ? '❤️' : '🤍';
           return `
             <div class="history-entry" data-ts="${entry.timestamp || ''}" style="animation: fadeInUp 0.5s ease-out ${idx * 0.05}s both;">
               <div class="history-header">
@@ -739,9 +741,12 @@
                   <span class="history-date">${formattedDate}</span>
                   <span class="history-user"> — ${escapeHtml(entry.name)}</span>
                 </div>
-                <div class="history-actions"><button class="feeling-delete-btn" data-ts="${entry.timestamp || ''}" aria-label="Delete feeling">
-                  <img src="/delete.png" alt="Delete" class="feeling-delete-icon" />
-                </button></div>
+                <div class="history-actions">
+                  <button class="feeling-love-btn ${isLoved}" data-ts="${entry.timestamp || ''}" aria-label="Like feeling">${heartIcon}</button>
+                  <button class="feeling-delete-btn" data-ts="${entry.timestamp || ''}" aria-label="Delete feeling">
+                    <img src="/delete.png" alt="Delete" class="feeling-delete-icon" />
+                  </button>
+                </div>
               </div>
               <div class="history-feeling">"${escapeHtml(entry.feeling).replace(/\n/g, '<br>')}"</div>
             </div>
@@ -782,8 +787,14 @@
         </div>
         <div class="history-feeling">"${escapeHtml(entry.feeling).replace(/\n/g, '<br>')}"</div>
       `;
-      // add delete action button into the header actions container
+      // add love and delete action buttons into the header actions container
       const actions = wrapper.querySelector('.history-actions');
+      const love = document.createElement('button');
+      love.className = 'feeling-love-btn';
+      love.setAttribute('data-ts', entry.timestamp || '');
+      love.setAttribute('aria-label', 'Like feeling');
+      love.textContent = '🤍';
+      if (actions) actions.appendChild(love);
       const del = document.createElement('button');
       del.className = 'feeling-delete-btn';
       del.setAttribute('data-ts', entry.timestamp || '');
@@ -806,6 +817,38 @@
       console.warn('Failed to optimistically append feeling', e);
     }
   }
+
+  // delegated handler for love buttons in history log
+  document.addEventListener('click', async (ev) => {
+    const loveBtn = ev.target.closest && ev.target.closest('.feeling-love-btn');
+    if (loveBtn) {
+      ev.preventDefault();
+      const ts = loveBtn.getAttribute('data-ts');
+      if (!ts) return;
+      try {
+        const isCurrentlyLoved = loveBtn.classList.contains('loved');
+        const newLovedState = !isCurrentlyLoved;
+        // Optimistically update UI
+        loveBtn.classList.toggle('loved', newLovedState);
+        loveBtn.textContent = newLovedState ? '❤️' : '🤍';
+        // Send to server
+        const res = await fetch('/feeling/love', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ timestamp: ts, loved: newLovedState })
+        });
+        if (!res.ok) {
+          // Revert on error
+          loveBtn.classList.toggle('loved', isCurrentlyLoved);
+          loveBtn.textContent = isCurrentlyLoved ? '❤️' : '🤍';
+          console.warn('Failed to update love status', await res.text());
+        }
+      } catch (err) {
+        console.warn('Failed to update love status', err);
+      }
+      return;
+    }
+  });
 
   // delegated handler for delete buttons in history log
   document.addEventListener('click', async (ev) => {
