@@ -883,32 +883,40 @@
 
       historyLog.innerHTML = history.map((entry, idx) => {
         // Use stored timestamp when available and display in UTC+7
-          const ts = entry.timestamp || (entry.date ? (entry.date + 'T00:00:00Z') : null);
-          const dateObj = ts ? new Date(ts) : new Date();
-          const weekday = dateObj.toLocaleDateString('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', weekday: 'short' });
-          const dateOnly = dateObj.toLocaleDateString('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' });
-          const formattedDate = `${weekday}, ${dateOnly}`;
+        const ts = entry.timestamp || (entry.date ? (entry.date + 'T00:00:00Z') : null);
+        const dateObj = ts ? new Date(ts) : new Date();
+        const weekday = dateObj.toLocaleDateString('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', weekday: 'short' });
+        const dateOnly = dateObj.toLocaleDateString('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' });
+        const formattedDate = `${weekday}, ${dateOnly}`;
         const emoticon = getEmoticon(entry.feeling);
         const isLoved = entry.loved ? 'loved' : '';
         const heartIcon = entry.loved ? '❤️' : '🤍';
-          return `
-            <div class="history-entry" data-ts="${entry.timestamp || ''}" style="animation: fadeInUp 0.5s ease-out ${idx * 0.05}s both;">
-              <div class="history-header">
-                <div class="history-left">
-                  <span class="history-emoticon">${emoticon}</span>
-                  <span class="history-date">${formattedDate}</span>
-                  <span class="history-user"> — ${escapeHtml(entry.name)}</span>
-                </div>
-                <div class="history-actions">
-                  <button class="feeling-love-btn ${isLoved}" data-ts="${entry.timestamp || ''}" aria-label="Like feeling">${heartIcon}</button>
-                  <button class="feeling-delete-btn" data-ts="${entry.timestamp || ''}" aria-label="Delete feeling">
-                    <img src="/delete.png" alt="Delete" class="feeling-delete-icon" />
-                  </button>
-                </div>
+        // Tự động xuống dòng cho URL dài, không ảnh hưởng từ khác, đồng thời in đậm **text**
+        let feelingHtml = escapeHtml(entry.feeling).replace(/\n/g, '<br>');
+        // In đậm **text**
+        feelingHtml = feelingHtml.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+        // Xuống dòng cho URL dài
+        feelingHtml = feelingHtml.replace(/(https?:\/\/[^\s<>"']+)/g, function(url) {
+          return `<span class=\"break-url\">${url}</span>`;
+        });
+        return `
+          <div class="history-entry" data-ts="${entry.timestamp || ''}" style="animation: fadeInUp 0.5s ease-out ${idx * 0.05}s both;">
+            <div class="history-header">
+              <div class="history-left">
+                <span class="history-emoticon">${emoticon}</span>
+                <span class="history-date">${formattedDate}</span>
+                <span class="history-user"> — ${escapeHtml(entry.name)}</span>
               </div>
-              <div class="history-feeling">"${escapeHtml(entry.feeling).replace(/\n/g, '<br>')}"</div>
+              <div class="history-actions">
+                <button class="feeling-love-btn ${isLoved}" data-ts="${entry.timestamp || ''}" aria-label="Like feeling">${heartIcon}</button>
+                <button class="feeling-delete-btn" data-ts="${entry.timestamp || ''}" aria-label="Delete feeling">
+                  <img src="/delete.png" alt="Delete" class="feeling-delete-icon" />
+                </button>
+              </div>
             </div>
-          `;
+            <div class="history-feeling">"${feelingHtml}"</div>
+          </div>
+        `;
       }).join('');
     } catch (e) {
       console.warn('Failed to load feeling history', e);
@@ -934,6 +942,14 @@
       const wrapper = document.createElement('div');
       wrapper.className = 'history-entry new-entry';
       wrapper.style.animation = 'fadeInUp 0.45s ease-out both';
+      // Tự động xuống dòng cho URL dài, không ảnh hưởng từ khác, đồng thời in đậm **text**
+      let feelingHtml = escapeHtml(entry.feeling).replace(/\n/g, '<br>');
+      // In đậm **text**
+      feelingHtml = feelingHtml.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+      // Xuống dòng cho URL dài
+      feelingHtml = feelingHtml.replace(/(https?:\/\/[^\s<>"']+)/g, function(url) {
+        return `<span class=\"break-url\">${url}</span>`;
+      });
       wrapper.innerHTML = `
         <div class="history-header">
           <div class="history-left">
@@ -943,7 +959,7 @@
           </div>
           <div class="history-actions"></div>
         </div>
-        <div class="history-feeling">"${escapeHtml(entry.feeling).replace(/\n/g, '<br>')}"</div>
+        <div class="history-feeling">"${feelingHtml}"</div>
       `;
       // add love and delete action buttons into the header actions container
       const actions = wrapper.querySelector('.history-actions');
