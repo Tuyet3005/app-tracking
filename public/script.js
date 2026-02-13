@@ -777,6 +777,12 @@
     if (typeof text === 'string') el.textContent = text;
   }
 
+  // Lưu feeling vào localStorage khi nhập liệu
+  feelingInput.addEventListener('input', () => {
+    const key = getTodayKey();
+    localStorage.setItem(key, feelingInput.value || '');
+  });
+
   // Handle Ctrl/Cmd+Enter to save (allow Enter for newline in textarea)
   feelingInput.addEventListener('keydown', async (e) => {
     const isSubmit = (e.key === 'Enter' && (e.ctrlKey || e.metaKey));
@@ -810,6 +816,7 @@
           const entryToAppend = (json && json.entry) ? json.entry : payload;
           appendFeelingToHistory(entryToAppend);
         feelingInput.value = '';
+        localStorage.removeItem(getTodayKey()); // Xóa khỏi localStorage sau khi đã lưu thành công
         feelingInput.blur();
         setFeelingStatus('saved', 'Saved');
       } else {
@@ -822,10 +829,16 @@
     }
   });
 
-  // Load today's feeling on page load
+  // Load today's feeling on page load (ưu tiên localStorage)
   async function loadTodayFeeling() {
     try {
-      const today = getTodayKey().replace('feelings_', '');
+      const key = getTodayKey();
+      const local = localStorage.getItem(key);
+      if (local && local.trim()) {
+        feelingInput.value = local;
+        return;
+      }
+      const today = key.replace('feelings_', '');
       const res = await fetch(`/feeling?date=${today}`);
       if (res.ok) {
         const data = await res.json();
@@ -956,6 +969,94 @@
   }
 
   // delegated handler for love buttons in history log
+
+  // Enable double-click to edit feelings in the log
+  document.addEventListener('dblclick', function(ev) {
+    const feelingDiv = ev.target.closest('.history-feeling');
+    if (!feelingDiv) return;
+    if (feelingDiv.querySelector('textarea')) return; // already editing
+    const original = feelingDiv.innerText.replace(/^"|"$/g, '').replace(/\n/g, '\n');
+    const textarea = document.createElement('textarea');
+    textarea.value = original;
+    textarea.style.width = '98%';
+    textarea.style.minHeight = '40px';
+    textarea.style.fontSize = '1rem';
+    textarea.style.fontFamily = 'inherit';
+    textarea.style.borderRadius = '8px';
+    textarea.style.border = '1px solid #cbd5e1';
+    textarea.style.margin = '2px 0';
+    textarea.style.padding = '4px 8px';
+    feelingDiv.innerHTML = '';
+    feelingDiv.appendChild(textarea);
+    textarea.focus();
+
+    textarea.addEventListener('keydown', function(e) {
+      // Ctrl+B to bold selected text
+      if (e.ctrlKey && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        if (start !== end) {
+          const before = textarea.value.substring(0, start);
+          const selected = textarea.value.substring(start, end);
+          const after = textarea.value.substring(end);
+          // Use ** for markdown-like bold
+          textarea.value = before + '**' + selected + '**' + after;
+          // Restore selection
+          textarea.selectionStart = start;
+          textarea.selectionEnd = end + 4;
+        }
+        return;
+      }
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        // Blur textarea to trigger blur handler, which will safely update innerHTML
+        textarea.blur();
+      }
+      if (e.key === 'Escape') {
+        let html = original.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+        html = html.replace(/(https?:\/\/[^\s<>"]+)/g, function(url) {
+          if (url.length > 30) {
+            return `<span style="word-break:break-all;">${url}</span>`;
+          }
+          return url;
+        });
+        feelingDiv.innerHTML = '"' + html + '"';
+      }
+    });
+    textarea.addEventListener('blur', function() {
+      // Đảm bảo textarea vẫn còn là con của feelingDiv và feelingDiv còn trong DOM
+      if (!feelingDiv.isConnected) return;
+      if (feelingDiv.contains(textarea)) {
+        const newText = textarea.value.trim();
+        const entryDiv = feelingDiv.closest('.history-entry');
+        const ts = entryDiv ? entryDiv.getAttribute('data-ts') : null;
+        const userSpan = entryDiv ? entryDiv.querySelector('.history-user') : null;
+        let username = 'Anonymous';
+        if (userSpan) {
+          // Lấy tên user từ text: ' — username'
+          const match = userSpan.textContent.match(/—\s*(.*)/);
+          if (match) username = match[1].trim();
+        }
+        // Gửi request chỉnh sửa cảm xúc đúng entry (không tạo mới)
+        if (ts && newText) {
+          fetch('/feeling/edit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ timestamp: ts, feeling: newText })
+          }).catch(() => {});
+        }
+        let html = newText.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+        html = html.replace(/(https?:\/\/[^\s<>"]+)/g, function(url) {
+          if (url.length > 30) {
+            return `<span style="word-break:break-all;">${url}</span>`;
+          }
+          return url;
+        });
+        feelingDiv.innerHTML = '"' + html + '"';
+      }
+    });
+  });
   document.addEventListener('click', async (ev) => {
     const loveBtn = ev.target.closest && ev.target.closest('.feeling-love-btn');
     if (loveBtn) {
