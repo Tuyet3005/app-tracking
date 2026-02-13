@@ -2,6 +2,8 @@
 
 // User name box: save with progress and show saved state
 (() => {
+    // Clear cloud input on page load
+    feelingInput.value = '';
   const nameInput = document.getElementById('usernameBox');
   const saveLabel = document.getElementById('usernameSave');
   if (!nameInput) return;
@@ -811,14 +813,16 @@
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-          // server will return the saved entry (with timestamp) so we can append accurately
-          const json = await res.json().catch(() => null);
-          const entryToAppend = (json && json.entry) ? json.entry : payload;
-          appendFeelingToHistory(entryToAppend);
+        // server will return the saved entry (with timestamp) so we can append accurately
+        const json = await res.json().catch(() => null);
+        const entryToAppend = (json && json.entry) ? json.entry : payload;
+        appendFeelingToHistory(entryToAppend);
+        // Clear all user input in cloud area
         feelingInput.value = '';
-        localStorage.removeItem(getTodayKey()); // Xóa khỏi localStorage sau khi đã lưu thành công
+        localStorage.removeItem(getTodayKey());
+        setFeelingStatus('', ''); // clear status text
+        // Nếu có các trường khác trong cloud, clear tại đây nếu cần
         feelingInput.blur();
-        setFeelingStatus('saved', 'Saved');
       } else {
         setFeelingStatus('error', 'Save failed');
         console.warn('Failed to save feeling', await res.text());
@@ -831,24 +835,28 @@
 
   // Load today's feeling on page load (ưu tiên localStorage)
   async function loadTodayFeeling() {
-    try {
-      const key = getTodayKey();
-      const local = localStorage.getItem(key);
-      if (local && local.trim()) {
-        feelingInput.value = local;
-        return;
-      }
-      const today = key.replace('feelings_', '');
-      const res = await fetch(`/feeling?date=${today}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.feeling) {
-          feelingInput.value = data.feeling;
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to load feeling', e);
-    }
+    // Luôn clear input khi load lại trang, không tự động điền lại nội dung cũ
+    feelingInput.value = '';
+    // Nếu muốn load từ server (nếu cần), có thể bổ sung logic ở đây
+    // Nếu muốn giữ lại logic cũ, hãy bỏ comment các dòng dưới:
+    // try {
+    //   const key = getTodayKey();
+    //   const local = localStorage.getItem(key);
+    //   if (local && local.trim()) {
+    //     feelingInput.value = local;
+    //     return;
+    //   }
+    //   const today = key.replace('feelings_', '');
+    //   const res = await fetch(`/feeling?date=${today}`);
+    //   if (res.ok) {
+    //     const data = await res.json();
+    //     if (data && data.feeling) {
+    //       feelingInput.value = data.feeling;
+    //     }
+    //   }
+    // } catch (e) {
+    //   console.warn('Failed to load feeling', e);
+    // }
   }
 
   // Load feeling history from server
