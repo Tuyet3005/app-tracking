@@ -122,6 +122,10 @@ app.post('/signup', async (req, res) => {
       passwordHash: passwordHash,
       displayName: trimmedDisplayName,
     });
+    
+    req.session.userId = username.trim();
+    req.session.username = username.trim();
+    req.session.displayName = trimmedDisplayName;
 
     res.json({ success: true, message: 'Account created successfully' });
   } catch (error) {

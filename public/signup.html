@@ -383,9 +383,9 @@
         const data = await response.json();
 
         if (response.ok) {
-          showSuccess('Account created successfully! Redirecting to login...');
+          showSuccess('Account created successfully! Redirecting to home...');
           setTimeout(() => {
-            window.location.href = '/login.html';
+            window.location.href = '/';
           }, 1500);
         } else {
           showError(data.error || 'Signup failed. Please try again.');
