@@ -477,19 +477,73 @@ app.post('/feeling/edit', requireAuth, async (req, res) => {
   res.json({ ok: true, entry });
 });
 
-// Get feeling for a specific date
-app.get('/feeling', requireAuth, async (req, res) => {
-  const { date } = req.query;
-  if (!date) return res.status(400).json({ error: 'Date is required' });
+app.post('/feelings', requireAuth, async (req, res) => {
+  const { timestamp, name, feeling } = req.body;
+  
+  if (!timestamp || !name || !feeling) {
+    return res.status(400).json({ error: 'timestamp, name, and feeling are required' });
+  }
 
-  const feelings = JSON.parse(await readFile(BLOB_KEY_FEELINGS));
-  const entry = feelings.find(f => f.date === date);
-  return res.json(entry || {});
+  const date = new Date().toISOString().slice(0, 10);
+
+  await db.insert(schema.feelingItems).values({
+    userId: req.session.userId,
+    date,
+    timestamp,
+    feeling,
+  });
+  
+  res.json({ ok: true });
 });
 
-// Get all feelings history
-app.get('/feelings/history', requireAuth, async (req, res) => {
-  return res.json(JSON.parse(await readFile(BLOB_KEY_FEELINGS)));
+app.patch('/feelings/:id', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const { feeling, isLoved } = req.body;
+
+  const update = {};
+  if (feeling !== undefined) update.feeling = feeling;
+  if (isLoved !== undefined) update.isLoved = isLoved ? 1 : 0;
+  
+  if (Object.keys(update).length === 0) {
+    return res.status(400).json({ error: 'At least one of feeling or isLoved must be provided' });
+  }
+
+  await db
+    .update(schema.feelingItems)
+    .set(update)
+    .where(
+      and(
+        eq(schema.feelingItems.id, id),
+        eq(schema.feelingItems.userId, req.session.userId),
+      ),
+    );
+
+  res.json({ ok: true });
+});
+
+app.delete('/feelings/:id', requireAuth, async (req, res) => {
+  const { id } = req.params;
+
+  await db
+    .delete(schema.feelingItems)
+    .where(
+      and(
+        eq(schema.feelingItems.id, id),
+        eq(schema.feelingItems.userId, req.session.userId),
+      ),
+    );
+
+  res.json({ ok: true });
+});
+
+app.get('/feelings', requireAuth, async (req, res) => {
+  return res.json(
+    await db
+      .select()
+      .from(schema.feelingItems)
+      .where(eq(schema.feelingItems.userId, req.session.userId))
+      .orderBy(desc(schema.feelingItems.timestamp)),
+  );
 });
 
 // Save notes

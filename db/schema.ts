@@ -58,9 +58,19 @@ export const todoItems = sqliteTable("todoItems", {
   createdAt: text().notNull(),
 });
 
+export const feelingItems = sqliteTable("feelingItems", {
+  id: int().primaryKey(),
+  userId: int().references(() => users.id).notNull(),
+  date: text().notNull(),
+  timestamp: text().notNull(),
+  feeling: text().notNull(),
+  isLoved: int().default(0).notNull(),
+});
+
 export const backupTables = {
-  users,
   camProgresses,
+  feelingItems,
   userActiveLog,
+  users,
   todoItems,
 }

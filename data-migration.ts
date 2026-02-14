@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 const MIGRATE_PROGRESS = false;
 const MIGRATE_ACTIVITIES = false;
 const MIGRATE_TODOS = false;
+const MIGRATE_FEELINGS = false;
 
 (async function () {
   const user = await db
@@ -127,6 +128,42 @@ const MIGRATE_TODOS = false;
     }
   } else {
     console.log("Skipping todo items migration (MIGRATE_TODOS is false)");
+  }
+
+  if (MIGRATE_FEELINGS) {
+    console.log("Migrating feelings");
+
+    const feelingsData = await get("feelings.json", "string");
+    const feelings = JSON.parse(feelingsData.data || "[]");
+    console.log("Feelings entries in progress:", feelings.length);
+
+    const existingFeelings = await db
+      .select()
+      .from(schema.feelingItems)
+      .where(eq(schema.feelingItems.userId, userId));
+    console.log("Existing feelings entries:", existingFeelings.length);
+
+    const newFeelings = feelings.filter(
+      (feeling: any) =>
+        !existingFeelings.some(
+          (existing) =>
+            existing.feeling === feeling.feeling &&
+            existing.timestamp === feeling.timestamp,
+        ),
+    );
+    console.log("New feelings entries to insert:", newFeelings.length);
+
+    for (const feeling of newFeelings) {
+      await db.insert(schema.feelingItems).values({
+        userId,
+        feeling: feeling.feeling,
+        timestamp: feeling.timestamp,
+        date: feeling.date,
+        isLoved: feeling.loved ? 1 : 0,
+      });
+    }
+  } else {
+    console.log("Skipping feelings migration (MIGRATE_FEELINGS is false)");
   }
 
   console.log("Migration complete");

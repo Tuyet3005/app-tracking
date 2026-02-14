@@ -912,7 +912,6 @@ const SAVING_STATUSES = {
     e.preventDefault();
     e.stopPropagation();
 
-    const today = getTodayKey().replace('feelings_', '');
     const feelingText = (feelingInput.value || '').trim();
     const usernameEl = document.getElementById('usernameBox');
     const username = (usernameEl && usernameEl.value) || 'Anonymous';
@@ -920,28 +919,25 @@ const SAVING_STATUSES = {
     if (!feelingText) return;
 
     const payload = {
-      date: today,
+      timestamp: new Date().toISOString(),
       name: username,
       feeling: feelingText
     };
 
     try {
       setFeelingStatus(SAVING_STATUSES.SAVING, 'Saving…');
-      const res = await fetch('/feeling', {
+      const res = await fetch('/feelings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-        // server will return the saved entry (with timestamp) so we can append accurately
-        const json = await res.json().catch(() => null);
-        const entryToAppend = (json && json.entry) ? json.entry : payload;
-        appendFeelingToHistory(entryToAppend);
+        // Reload the full history to get the new entry with its ID
+        await loadFeelingHistory();
         // Clear all user input in cloud area
         feelingInput.value = '';
         localStorage.removeItem(getTodayKey());
         setFeelingStatus('', ''); // clear status text
-        // Nếu có các trường khác trong cloud, clear tại đây nếu cần
         feelingInput.blur();
       } else {
         setFeelingStatus(SAVING_STATUSES.ERROR, 'Save failed');
@@ -982,7 +978,7 @@ const SAVING_STATUSES = {
   // Load feeling history from server
   window.loadFeelingHistory = async function() {
     try {
-      const res = await fetch('/feelings/history');
+      const res = await fetch('/feelings');
       if (!res.ok) return;
       const history = await res.json() || [];
       
@@ -1009,8 +1005,8 @@ const SAVING_STATUSES = {
         const dateOnly = dateObj.toLocaleDateString('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' });
         const formattedDate = `${weekday}, ${dateOnly}`;
         const emoticon = getEmoticon(entry.feeling);
-        const isLoved = entry.loved ? 'loved' : '';
-        const heartIcon = entry.loved ? '❤️' : '🤍';
+        const isLoved = entry.isLoved ? 'loved' : '';
+        const heartIcon = entry.isLoved ? '❤️' : '🤍';
         // Tự động xuống dòng cho URL dài, không ảnh hưởng từ khác, đồng thời in đậm **text**
         let feelingHtml = escapeHtml(entry.feeling).replace(/\n/g, '<br>');
         // In đậm **text**
@@ -1020,7 +1016,7 @@ const SAVING_STATUSES = {
           return `<span class=\"break-url\">${url}</span>`;
         });
         return `
-          <div class="history-entry" data-ts="${entry.timestamp || ''}" style="animation: fadeInUp 0.5s ease-out ${idx * 0.05}s both;">
+          <div class="history-entry" data-id="${entry.id || ''}" style="animation: fadeInUp 0.5s ease-out ${idx * 0.05}s both;">
             <div class="history-header">
               <div class="history-left">
                 <span class="history-emoticon">${emoticon}</span>
@@ -1028,8 +1024,8 @@ const SAVING_STATUSES = {
                 <span class="history-user"> — ${escapeHtml(entry.name)}</span>
               </div>
               <div class="history-actions">
-                <button class="feeling-love-btn ${isLoved}" data-ts="${entry.timestamp || ''}" aria-label="Like feeling">${heartIcon}</button>
-                <button class="feeling-delete-btn" data-ts="${entry.timestamp || ''}" aria-label="Delete feeling">
+                <button class="feeling-love-btn ${isLoved}" data-id="${entry.id || ''}" aria-label="Like feeling">${heartIcon}</button>
+                <button class="feeling-delete-btn" data-id="${entry.id || ''}" aria-label="Delete feeling">
                   <img src="/delete.png" alt="Delete" class="feeling-delete-icon" />
                 </button>
               </div>
@@ -1061,6 +1057,7 @@ const SAVING_STATUSES = {
 
       const wrapper = document.createElement('div');
       wrapper.className = 'history-entry new-entry';
+      wrapper.setAttribute('data-id', entry.id || '');
       wrapper.style.animation = 'fadeInUp 0.45s ease-out both';
       // Tự động xuống dòng cho URL dài, không ảnh hưởng từ khác, đồng thời in đậm **text**
       let feelingHtml = escapeHtml(entry.feeling).replace(/\n/g, '<br>');
@@ -1085,13 +1082,13 @@ const SAVING_STATUSES = {
       const actions = wrapper.querySelector('.history-actions');
       const love = document.createElement('button');
       love.className = 'feeling-love-btn';
-      love.setAttribute('data-ts', entry.timestamp || '');
+      love.setAttribute('data-id', entry.id || '');
       love.setAttribute('aria-label', 'Like feeling');
       love.textContent = '🤍';
       if (actions) actions.appendChild(love);
       const del = document.createElement('button');
       del.className = 'feeling-delete-btn';
-      del.setAttribute('data-ts', entry.timestamp || '');
+      del.setAttribute('data-id', entry.id || '');
       del.setAttribute('aria-label', 'Delete feeling');
       del.innerHTML = '<img src="/delete.png" alt="Delete" class="feeling-delete-icon" />';
       if (actions) actions.appendChild(del);
@@ -1174,7 +1171,7 @@ const SAVING_STATUSES = {
       if (feelingDiv.contains(textarea)) {
         const newText = textarea.value.trim();
         const entryDiv = feelingDiv.closest('.history-entry');
-        const ts = entryDiv ? entryDiv.getAttribute('data-ts') : null;
+        const id = entryDiv ? entryDiv.getAttribute('data-id') : null;
         const userSpan = entryDiv ? entryDiv.querySelector('.history-user') : null;
         let username = 'Anonymous';
         if (userSpan) {
@@ -1183,11 +1180,11 @@ const SAVING_STATUSES = {
           if (match) username = match[1].trim();
         }
         // Gửi request chỉnh sửa cảm xúc đúng entry (không tạo mới)
-        if (ts && newText) {
-          fetch('/feeling/edit', {
-            method: 'POST',
+        if (id && newText) {
+          fetch(`/feelings/${id}`, {
+            method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ timestamp: ts, feeling: newText })
+            body: JSON.stringify({ feeling: newText })
           }).catch(() => {});
         }
         let html = newText.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
@@ -1205,8 +1202,8 @@ const SAVING_STATUSES = {
     const loveBtn = ev.target.closest && ev.target.closest('.feeling-love-btn');
     if (loveBtn) {
       ev.preventDefault();
-      const ts = loveBtn.getAttribute('data-ts');
-      if (!ts) return;
+      const id = loveBtn.getAttribute('data-id');
+      if (!id) return;
       try {
         const isCurrentlyLoved = loveBtn.classList.contains('loved');
         const newLovedState = !isCurrentlyLoved;
@@ -1214,10 +1211,10 @@ const SAVING_STATUSES = {
         loveBtn.classList.toggle('loved', newLovedState);
         loveBtn.textContent = newLovedState ? '❤️' : '🤍';
         // Send to server
-        const res = await fetch('/feeling/love', {
-          method: 'POST',
+        const res = await fetch(`/feelings/${id}`, {
+          method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ timestamp: ts, loved: newLovedState })
+          body: JSON.stringify({ isLoved: newLovedState })
         });
         if (!res.ok) {
           // Revert on error
@@ -1237,15 +1234,13 @@ const SAVING_STATUSES = {
     const btn = ev.target.closest && ev.target.closest('.feeling-delete-btn');
     if (!btn) return;
     ev.preventDefault();
-    const ts = btn.getAttribute('data-ts');
-    if (!ts) return;
+    const id = btn.getAttribute('data-id');
+    if (!id) return;
     try {
       btn.disabled = true;
       btn.classList.add('deleting');
-      const res = await fetch('/feeling', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ timestamp: ts })
+      const res = await fetch(`/feelings/${id}`, {
+        method: 'DELETE'
       });
       if (res.ok) {
         // remove the entry element from DOM

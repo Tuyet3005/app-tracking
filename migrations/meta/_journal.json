@@ -71,6 +71,13 @@
       "when": 1771067026199,
       "tag": "0009_huge_agent_brand",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1771068758549,
+      "tag": "0010_icy_miss_america",
+      "breakpoints": true
     }
   ]
 }
