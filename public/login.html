@@ -97,6 +97,23 @@
       background: #ffffff;
     }
 
+    .input-with-icon { position: relative }
+    .show-pass-btn {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 1.05rem;
+      padding: 6px;
+      border-radius: 8px;
+      transition: background 150ms;
+      color: #475569;
+    }
+    .show-pass-btn:hover { background: rgba(15,23,42,0.03) }
+
     .login-button {
       width: 100%;
       padding: 14px 24px;
@@ -223,15 +240,18 @@
 
       <div class="form-group">
         <label for="password" class="form-label">Password</label>
-        <input
-          type="password"
-          id="password"
-          name="password"
-          class="form-input"
-          placeholder="Enter your password"
-          required
-          autocomplete="current-password"
-        />
+        <div class="input-with-icon">
+          <input
+            type="password"
+            id="password"
+            name="password"
+            class="form-input"
+            placeholder="Enter your password"
+            required
+            autocomplete="current-password"
+          />
+          <button type="button" id="togglePassword" class="show-pass-btn" aria-pressed="false" title="Show password">👁️</button>
+        </div>
       </div>
 
       <button type="submit" class="login-button" id="loginButton">
@@ -320,6 +340,19 @@
     // Clear error message when user starts typing
     usernameInput.addEventListener('input', hideMessages);
     passwordInput.addEventListener('input', hideMessages);
+
+    // Toggle password visibility
+    const togglePassword = document.getElementById('togglePassword');
+    if (togglePassword) {
+      togglePassword.addEventListener('click', () => {
+        const t = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', t);
+        const pressed = t === 'text';
+        togglePassword.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+        togglePassword.textContent = pressed ? '🙈' : '👁️';
+        togglePassword.title = pressed ? 'Hide password' : 'Show password';
+      });
+    }
   </script>
 </body>
 </html>
