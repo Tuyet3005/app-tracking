@@ -6,7 +6,7 @@ import path from 'path';
 import * as blobClient from '@tigrisdata/storage';
 import { db, schema } from './db/index.js';
 import { DrizzleStore } from './drizzle-session-store.js';
-import { and, eq, like } from 'drizzle-orm';
+import { and, eq, like, desc, max } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
 import fs from 'fs';
 
@@ -45,6 +45,53 @@ app.get('/', (req, res) => {
     return res.redirect('/login.html');
   }
   res.redirect('/index.html');
+});
+
+const BACKUP_INTERVAL = 1000 * 60 * 60 * 8; // 8 hour
+app.use(async (req, res, next) => {
+  let backupId = null;
+  
+  await db.transaction(async (tx) => {
+    const lastBackup = await tx
+      .select({
+        timestamp: max(schema.databaseBackups.timestamp),
+      })
+      .from(schema.databaseBackups);
+    const lastBackupTime = lastBackup[0]?.timestamp || 0;
+    const now = Date.now();
+    
+    if (now - lastBackupTime > BACKUP_INTERVAL) {
+      const backupName = `backups/backup-${new Date(now).toISOString()}.json`;
+      await tx.insert(schema.databaseBackups).values({
+        timestamp: now,
+        blobKey: backupName,
+      });
+      backupId = backupName;
+    }
+  });
+
+  if (backupId) {
+    console.log(`Creating database backup: ${backupId}`);
+    
+    const backupData = {};
+
+    for (const [tableName, table] of [
+      "users",
+      "camProgresses",
+      "userActiveLog",
+    ].map((name) => [name, schema[name]])) {
+      console.log(`Backing up table: ${tableName}`);
+      const data = await db.select().from(table);
+      console.log(`Rows backed up for ${tableName}:`, data.length);
+      backupData[tableName] = data;
+    }
+
+    console.log('Uploading backup to blob storage...');
+    await blobClient.put(backupId, JSON.stringify(backupData));
+    console.log(`Database backed up to ${backupId}`);
+  }
+  
+  next();
 });
 
 // Authentication middleware

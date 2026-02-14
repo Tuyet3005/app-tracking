@@ -1,4 +1,4 @@
-import { int, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { blob, int, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable("users", {
   id: int().primaryKey(),
@@ -40,3 +40,9 @@ export const userActiveLog = sqliteTable("userActiveLog", {
 }, (t) => [
   uniqueIndex("uniqueUserDate").on(t.userId, t.date),
 ]);
+
+export const databaseBackups = sqliteTable("databaseBackups", {
+  id: int().primaryKey(),
+  timestamp: int().notNull(),
+  blobKey: text().notNull(),
+});
