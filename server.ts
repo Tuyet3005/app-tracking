@@ -68,11 +68,16 @@ async function readFile(filePath) {
 
 // Signup route
 app.post('/signup', async (req, res) => {
-  const { username, password } = req.body;
+  const { displayName, username, password } = req.body;
 
   // Validation
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Username and password are required' });
+  if (!displayName || !username || !password) {
+    return res.status(400).json({ error: 'Display name, username, and password are required' });
+  }
+
+  const trimmedDisplayName = displayName.trim();
+  if (trimmedDisplayName.length < 2 || trimmedDisplayName.length > 50) {
+    return res.status(400).json({ error: 'Display name must be between 2 and 50 characters' });
   }
 
   const usernameRegex = /^[a-zA-Z0-9_]{3,30}$/;
@@ -105,6 +110,7 @@ app.post('/signup', async (req, res) => {
     await db.insert(schema.users).values({
       username: username.trim(),
       passwordHash: passwordHash,
+      displayName: trimmedDisplayName,
     });
 
     res.json({ success: true, message: 'Account created successfully' });
@@ -142,8 +148,9 @@ app.post('/login', async (req, res) => {
     // Set session
     req.session.userId = user.id;
     req.session.username = user.username;
+    req.session.displayName = user.displayName;
 
-    res.json({ success: true, username: user.username });
+    res.json({ success: true, username: user.username, displayName: user.displayName });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'An error occurred during login' });
@@ -165,7 +172,8 @@ app.get('/api/auth/status', (req, res) => {
   if (req.session.userId) {
     res.json({
       authenticated: true,
-      username: req.session.username
+      username: req.session.username,
+      displayName: req.session.displayName
     });
   } else {
     res.json({ authenticated: false });

@@ -216,6 +216,22 @@
 
     <form id="signupForm">
       <div class="form-group">
+        <label for="displayName" class="form-label">Display Name</label>
+        <input
+          type="text"
+          id="displayName"
+          name="displayName"
+          class="form-input"
+          placeholder="Your name"
+          required
+          autocomplete="name"
+          minlength="2"
+          maxlength="50"
+        />
+        <div class="password-hint">Your full name or preferred display name</div>
+      </div>
+
+      <div class="form-group">
         <label for="username" class="form-label">Username</label>
         <input
           type="text"
@@ -278,6 +294,7 @@
     const signupButton = document.getElementById('signupButton');
     const errorMessage = document.getElementById('errorMessage');
     const successMessage = document.getElementById('successMessage');
+    const displayNameInput = document.getElementById('displayName');
     const usernameInput = document.getElementById('username');
     const passwordInput = document.getElementById('password');
     const confirmPasswordInput = document.getElementById('confirmPassword');
@@ -309,11 +326,22 @@
       e.preventDefault();
       hideMessages();
 
+      const displayName = displayNameInput.value.trim();
       const username = usernameInput.value.trim();
       const password = passwordInput.value;
       const confirmPassword = confirmPasswordInput.value;
 
       // Client-side validation
+      if (!displayName) {
+        showError('Display name is required');
+        return;
+      }
+
+      if (displayName.length < 2 || displayName.length > 50) {
+        showError('Display name must be between 2 and 50 characters');
+        return;
+      }
+
       if (!username) {
         showError('Username is required');
         return;
@@ -349,7 +377,7 @@
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ username, password }),
+          body: JSON.stringify({ displayName, username, password }),
         });
 
         const data = await response.json();
@@ -373,6 +401,7 @@
     });
 
     // Clear error message when user starts typing
+    displayNameInput.addEventListener('input', hideMessages);
     usernameInput.addEventListener('input', hideMessages);
     passwordInput.addEventListener('input', hideMessages);
     confirmPasswordInput.addEventListener('input', hideMessages);
