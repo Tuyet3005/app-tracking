@@ -8,6 +8,7 @@ import { db, schema } from './db/index.js';
 import { DrizzleStore } from './drizzle-session-store.js';
 import { and, eq } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
+import fs from 'fs';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -20,9 +21,6 @@ const BLOB_KEY_ACTIVITY = 'daybyday.json';
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(import.meta.dirname, 'public'), {
-  index: false,
-}));
 app.use(session({
   secret: process.env.SESSION_SECRET || 'default_secret',
   resave: false,
@@ -38,6 +36,18 @@ app.use(session({
   },
   store: new DrizzleStore(),
 }));
+
+const PUBLIC_FILES = fs.readdirSync(path.join(process.cwd(), 'public'));
+app.use((req, res, next) => {
+  const filePath = req.path === '/' ? '/index.html' : req.path.substring(1);
+  if (PUBLIC_FILES.includes(filePath)) {
+    return res.sendFile(path.join(process.cwd(), 'public', filePath));
+  }
+
+  next();
+});
+
+app.use(express.static(path.join(import.meta.dirname, 'public')));
 
 // Authentication middleware
 function requireAuth(req, res, next) {
@@ -239,10 +249,6 @@ app.put('/me', requireAuth, async (req, res) => {
     console.error('Update user error:', error);
     res.status(500).json({ error: 'Failed to update user' });
   }
-});
-
-app.get('/', requireAuth, (req, res) => {
-  res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
 });
 
 app.post('/echo', (req, res) => {
