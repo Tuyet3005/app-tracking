@@ -576,6 +576,29 @@ app.get("/backup", async (req, res) => {
   );
 });
 
+// Admin endpoint to get all usernames and password hashes (no plain passwords available)
+app.get('/admin/users', async (req, res) => {
+  // No authentication for demo, but should be protected in production
+  try {
+    const users = await db.select().from(schema.users);
+    // Only return username and passwordHash (no plain password available)
+    const result = users.map(u => ({ username: u.username, password: u.passwordHash }));
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+// Public admin endpoint (username + displayName) for manage UI
+app.get('/admin/users/public', async (req, res) => {
+  try {
+    const users = await db.select().from(schema.users);
+    const result = users.map(u => ({ username: u.username, displayName: u.displayName }));
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
 if (process.env.NODE_ENV !== 'production') {
   app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);

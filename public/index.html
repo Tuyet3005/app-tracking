@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" type="image/png" href="favicon.png" />
-  <title>🌼IELTS Orange tracking 🌼 --- Tuyết</title>
+  <title id="appTitle">🌼IELTS Orange tracking 🌼 --- Tuyết</title>
   <style>
     :root{--bg:#f6f9fc;--card:#ffffff;--muted:#6b7280}
     html, body { height: 100%; }
@@ -12,7 +12,7 @@
     h1 { font-size: 1.8rem; margin:0 0 8px 0 }
     /* username box styles */
     .username-row { margin:10px 0 14px 0; display:flex; align-items:center; gap:10px }
-    .username-input { padding:8px 12px; border-radius:999px; border:1px solid rgba(15,23,42,0.08); background: linear-gradient(180deg,#fff,#fbfdff); box-shadow:0 6px 14px rgba(2,6,23,0.04); width:280px; font-size:0.98rem }
+    .username-input { padding:8px 12px; border-radius:999px; border:1px solid rgba(15,23,42,0.08); background: linear-gradient(180deg,#fff,#fbfdff); box-shadow:0 6px 14px rgba(2,6,23,0.04); width:140px; font-size:0.98rem }
     .username-save { display:inline-flex; align-items:center; gap:8px; color:var(--muted); font-size:0.85rem }
     .vocab-btn { display:inline-flex; align-items:center; gap:6px; padding:10px 20px; border-radius:999px; border:2px solid rgba(255,255,255,0.5); background: linear-gradient(135deg, #b5c7ff 0%, #d4b5f0 30%, #ffc8f0 60%, #b5e9ff 100%); color:#2d3748; font-size:0.92rem; font-weight:700; text-decoration:none; box-shadow:0 6px 16px rgba(181,199,255,0.3), 0 3px 10px rgba(212,181,240,0.25); transition:all 220ms ease; cursor:pointer }
     .vocab-btn:hover { transform:translateY(-3px) scale(1.02); box-shadow:0 10px 24px rgba(181,199,255,0.4), 0 5px 14px rgba(212,181,240,0.35), 0 0 25px rgba(255,200,240,0.25); background: linear-gradient(135deg, #a5b7ff 0%, #c4a5e0 30%, #ffb8e0 60%, #a5d9ff 100%) }
@@ -1062,7 +1062,7 @@
   </style>
 </head>
 <body>
-  <h1>🌼IELTS Orange tracking 🌼 --- Tuyết</h1>
+  <h1 id="appHeader">🌼IELTS Orange tracking 🌼 --- <span id="displayName">Tuyết</span></h1>
   <div class="username-row">
     <input id="usernameBox" class="username-input" placeholder="Your name (optional)" aria-label="User name" />
     <a href="https://english-vocab-tracker.vercel.app/" target="_blank" class="vocab-btn">📖 Learn vocab</a>
@@ -1073,6 +1073,7 @@
     <div id="progressSaveStatus" class="progress-save saved" aria-live="polite">Saved</div>
     <div id="backupStatus" class="progress-save" aria-live="polite" style="color: #6b7280; font-size: 0.82rem;">💾 Loading backup info...</div>
     <button id="manualBackupBtn" class="vocab-btn" style="padding: 6px 12px; font-size: 0.85rem;">🔄 Backup Now</button>
+    <button id="manageBtn" class="vocab-btn" style="padding: 6px 10px; font-size: 0.85rem;">⚙️ Manage</button>
   </div>
     <!-- Cute Cloud Widget -->
   <div id="feeling-cloud" class="feeling-cloud">

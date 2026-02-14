@@ -55,6 +55,32 @@ const SAVING_STATUSES = {
       if (response.ok) {
         const user = await response.json();
         nameInput.value = user.displayName || '';
+        // Update app name in title and header
+        const displayName = user.displayName || '';
+        const appTitle = document.getElementById('appTitle');
+        const appHeader = document.getElementById('appHeader');
+        const displayNameSpan = document.getElementById('displayName');
+        if (appTitle) {
+          appTitle.textContent = `🌼IELTS Orange tracking 🌼 --- ${displayName}`;
+        }
+        if (appHeader && displayNameSpan) {
+          displayNameSpan.textContent = displayName;
+        }
+
+        // Show Manage button only for user with username 'tuyet'
+        try {
+          const manageBtn = document.getElementById('manageBtn');
+          if (manageBtn) {
+            const uname = (user.username || '').toString().toLowerCase();
+            if (uname === 'tuyet') {
+              manageBtn.style.display = '';
+            } else {
+              manageBtn.style.display = 'none';
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
         markSaved();
       } else {
         console.warn('Failed to load user display name');
@@ -69,6 +95,16 @@ const SAVING_STATUSES = {
   // Save display name to server
   async function saveDisplayName() {
     const displayName = nameInput.value.trim();
+    // Update app name in title and header live as user types
+    const appTitle = document.getElementById('appTitle');
+    const appHeader = document.getElementById('appHeader');
+    const displayNameSpan = document.getElementById('displayName');
+    if (appTitle) {
+      appTitle.textContent = `🌼IELTS Orange tracking 🌼 --- ${displayName}`;
+    }
+    if (appHeader && displayNameSpan) {
+      displayNameSpan.textContent = displayName;
+    }
     if (!displayName) {
       markError();
       return;
@@ -106,6 +142,48 @@ const SAVING_STATUSES = {
 
   // Load display name when page loads
   loadUserDisplayName();
+})();
+
+// Manage button: fetch list of usernames + displayNames and copy to clipboard
+(() => {
+  const manageBtn = document.getElementById('manageBtn');
+  if (!manageBtn) return;
+
+  manageBtn.addEventListener('click', async () => {
+    manageBtn.disabled = true;
+    const origText = manageBtn.textContent;
+    manageBtn.textContent = 'Copying...';
+    try {
+      const resp = await fetch('/admin/users/public');
+      if (!resp.ok) throw new Error('Failed to fetch users');
+      const users = await resp.json();
+      // Convert to dictionary { username: displayName }
+      const dict = {};
+      users.forEach(u => {
+        dict[u.username] = u.displayName || '';
+      });
+      const text = JSON.stringify(dict, null, 2);
+      if (!navigator.clipboard) {
+        // Fallback: create textarea
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+      } else {
+        await navigator.clipboard.writeText(text);
+      }
+      manageBtn.textContent = 'Copied ✓';
+      setTimeout(() => { manageBtn.textContent = origText; }, 2000);
+    } catch (err) {
+      console.error('Manage copy error', err);
+      manageBtn.textContent = 'Error';
+      setTimeout(() => { manageBtn.textContent = origText; }, 2000);
+    } finally {
+      manageBtn.disabled = false;
+    }
+  });
 })();
 
 // Practice Progress tables (3 passages side-by-side)
