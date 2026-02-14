@@ -49,3 +49,9 @@ export const databaseBackups = sqliteTable("databaseBackups", {
 }, (t) => [
   uniqueIndex("uniqueBlobKey").on(t.blobKey),
 ]);
+
+export const backupTables = {
+  users,
+  camProgresses,
+  userActiveLog,
+}

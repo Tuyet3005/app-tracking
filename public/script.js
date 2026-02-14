@@ -1884,6 +1884,49 @@ const SAVING_STATUSES = {
   // Expose loadBackupStatus globally so it can be called when saves complete
   window.refreshBackupStatus = loadBackupStatus;
 
+  // Manual backup button handler
+  const manualBackupBtn = document.getElementById('manualBackupBtn');
+  if (manualBackupBtn) {
+    manualBackupBtn.addEventListener('click', async () => {
+      try {
+        // Disable button and show loading state
+        manualBackupBtn.disabled = true;
+        manualBackupBtn.textContent = '⏳ Backing up...';
+        manualBackupBtn.style.opacity = '0.6';
+
+        backupStatus.textContent = '💾 Creating backup...';
+        backupStatus.style.color = '#f59e0b';
+
+        // Trigger backup via /api/cron endpoint
+        const res = await fetch('/api/cron', {
+          method: 'GET'
+        });
+
+        if (res.ok) {
+          backupStatus.textContent = '💾 Backup completed!';
+          backupStatus.style.color = '#10b981';
+          // Refresh backup status after a short delay to get the new timestamp
+          setTimeout(() => loadBackupStatus(), 500);
+        } else {
+          backupStatus.textContent = '💾 Backup failed';
+          backupStatus.style.color = '#ef4444';
+          console.error('Backup failed with status:', res.status);
+        }
+      } catch (e) {
+        console.error('Failed to trigger backup:', e);
+        backupStatus.textContent = '💾 Backup failed';
+        backupStatus.style.color = '#ef4444';
+      } finally {
+        // Re-enable button after 2 seconds
+        setTimeout(() => {
+          manualBackupBtn.disabled = false;
+          manualBackupBtn.textContent = '🔄 Backup Now';
+          manualBackupBtn.style.opacity = '1';
+        }, 2000);
+      }
+    });
+  }
+
   // Load backup status on page load
   loadBackupStatus();
 

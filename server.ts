@@ -86,11 +86,7 @@ app.get('/api/cron', async (req, res) => {
     
     const backupData = {};
 
-    for (const [tableName, table] of [
-      "users",
-      "camProgresses",
-      "userActiveLog",
-    ].map((name) => [name, schema[name]])) {
+    for (const [tableName, table] of Object.entries(schema.backupTables)) {
       console.log(`Backing up table: ${tableName}`);
       const data = await db.select().from(table);
       console.log(`Rows backed up for ${tableName}:`, data.length);
