@@ -47,7 +47,7 @@ app.get('/', (req, res) => {
   res.redirect('/index.html');
 });
 
-const BACKUP_INTERVAL = 1000 * 60 * 60 * 8; // 8 hour
+const BACKUP_INTERVAL = 1000 * 60 * 5; // 5 minutes
 app.use(async (req, res, next) => {
   let backupId = null;
   
