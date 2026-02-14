@@ -144,45 +144,14 @@ const SAVING_STATUSES = {
   loadUserDisplayName();
 })();
 
-// Manage button: fetch list of usernames + displayNames and copy to clipboard
+// Manage button: open hosted admin page in a new tab
 (() => {
   const manageBtn = document.getElementById('manageBtn');
   if (!manageBtn) return;
 
-  manageBtn.addEventListener('click', async () => {
-    manageBtn.disabled = true;
-    const origText = manageBtn.textContent;
-    manageBtn.textContent = 'Copying...';
-    try {
-      const resp = await fetch('/admin/users/public');
-      if (!resp.ok) throw new Error('Failed to fetch users');
-      const users = await resp.json();
-      // Convert to dictionary { username: displayName }
-      const dict = {};
-      users.forEach(u => {
-        dict[u.username] = u.displayName || '';
-      });
-      const text = JSON.stringify(dict, null, 2);
-      if (!navigator.clipboard) {
-        // Fallback: create textarea
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        ta.remove();
-      } else {
-        await navigator.clipboard.writeText(text);
-      }
-      manageBtn.textContent = 'Copied ✓';
-      setTimeout(() => { manageBtn.textContent = origText; }, 2000);
-    } catch (err) {
-      console.error('Manage copy error', err);
-      manageBtn.textContent = 'Error';
-      setTimeout(() => { manageBtn.textContent = origText; }, 2000);
-    } finally {
-      manageBtn.disabled = false;
-    }
+  manageBtn.addEventListener('click', () => {
+    // Open the hosted admin page in a new tab (safe opener)
+    window.open('/admin.html', '_blank', 'noopener,noreferrer');
   });
 })();
 

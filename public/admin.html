@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Admin — IELTS Orange tracking</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; }
+      .hidden { display: none; }
+      .loading { color: #6b7280; }
+      pre { background:#f3f4f6;padding:12px;border-radius:6px;overflow:auto }
+    </style>
+  </head>
+  <body>
+    <h1>Admin Panel</h1>
+    <p id="status" class="loading">Checking permissions…</p>
+
+    <div id="adminContent">
+      <p>Welcome, tuyet. This is the admin area.</p>
+
+      <section id="impersonateSection">
+        <h2>Impersonate users</h2>
+        <p>List of users — click <strong>Đăng nhập</strong> to impersonate a user (sets session user).</p>
+
+        <div style="margin:8px 0">
+          <label>Page size: <select id="pageSizeSelect"><option>10</option><option>20</option><option>50</option></select></label>
+        </div>
+
+        <div id="impersonateContainer">
+          <table id="impersonateTable" border="0" cellpadding="6" style="width:100%;border-collapse:collapse">
+            <thead style="background:#f3f4f6"><tr><th style="text-align:left">Username</th><th style="text-align:left">Display name</th><th></th></tr></thead>
+            <tbody id="impersonateBody"><tr><td colspan="3">No data</td></tr></tbody>
+          </table>
+        </div>
+
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+          <button id="prevPage">Prev</button>
+          <span id="pageInfo">Page 1</span>
+          <button id="nextPage">Next</button>
+        </div>
+      </section>
+
+      <hr />
+
+      <button id="refreshUsers">Load public users</button>
+      <pre id="usersPre">No data loaded.</pre>
+      <p><a href="/index.html">Back to app</a></p>
+    </div>
+
+    <script src="/admin.js"></script>
+  </body>
+</html>

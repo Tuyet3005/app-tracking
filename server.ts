@@ -123,6 +123,22 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+// Admin check middleware (only username 'tuyet' allowed)
+async function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.userId) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const users = await db.select().from(schema.users).where(eq(schema.users.id, req.session.userId!));
+    const user = users[0];
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    const uname = (user.username || '').toString().toLowerCase();
+    if (uname !== 'tuyet') return res.status(403).json({ error: 'Forbidden' });
+    next();
+  } catch (e) {
+    console.error('Admin check failed', e);
+    res.status(500).json({ error: 'Internal error' });
+  }
+}
+
 async function writeFile(filePath: string, data: string) {
   await blobClient.put(filePath, data);
 
@@ -596,6 +612,58 @@ app.get('/admin/users/public', async (req, res) => {
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+// Paginated list for impersonation UI (admin-only)
+app.get('/admin/impersonate', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const page = Math.max(1, Number(req.query.page || 1));
+    const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize || 10)));
+
+    const offset = (page - 1) * pageSize;
+
+    const users = await db.select().from(schema.users).limit(pageSize).offset(offset);
+    // get total count
+    const all = await db.select().from(schema.users);
+    const total = Array.isArray(all) ? all.length : 0;
+
+    const payload = {
+      users: users.map(u => ({ id: u.id, username: u.username, displayName: u.displayName })),
+      total,
+      page,
+      pageSize,
+    };
+
+    res.json(payload);
+  } catch (e) {
+    console.error('Failed to fetch impersonate users', e);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+// Impersonate a user (admin-only) — set session userId to target user id
+app.post('/admin/impersonate', requireAuth, requireAdmin, async (req, res) => {
+  const { userId } = req.body || {};
+  if (userId === undefined || userId === null) {
+    return res.status(400).json({ error: 'userId is required' });
+  }
+
+  const id = Number(userId);
+  if (Number.isNaN(id)) return res.status(400).json({ error: 'userId must be numeric' });
+
+  try {
+    const users = await db.select().from(schema.users).where(eq(schema.users.id, id));
+    const user = users[0];
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Set session to impersonated user id
+    req.session.userId = user.id;
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Failed to impersonate', e);
+    res.status(500).json({ error: 'Failed to impersonate' });
   }
 });
 
