@@ -1584,10 +1584,12 @@
   let currentDate = new Date();
   let activeDays = new Set(); // Store active dates in YYYY-MM-DD format
 
-  // Load activity data from backend
-  async function loadActivityData() {
+  // Load activity data from backend with optional month parameter
+  async function loadActivityData(month = null) {
     try {
-      const res = await fetch('/activity');
+      // If month is provided, use it; otherwise fetch all data
+      const url = month ? `/activity?month=${month}` : '/activity';
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         activeDays = new Set(data.activeDays || []);
@@ -1600,23 +1602,48 @@
     renderCalendar();
   }
 
-  // Save activity data to backend
-  async function saveActivityData() {
+  // Helper function to get YYYY-MM format from currentDate
+  function getCurrentMonthKey() {
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+  }
+
+  // Add activity day to backend
+  async function addActivityDay(dateKey) {
     try {
-      const dataToSave = Array.from(activeDays);
-      console.log('Saving activity data:', dataToSave);
+      console.log('Adding activity day:', dateKey);
       const res = await fetch('/activity', {
-        method: 'POST',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ activeDays: dataToSave })
+        body: JSON.stringify({ date: dateKey })
       });
       if (res.ok) {
-        console.log('Activity data saved successfully');
+        console.log('Activity day added successfully');
       } else {
-        console.error('Failed to save activity data, status:', res.status);
+        console.error('Failed to add activity day, status:', res.status);
       }
     } catch (e) {
-      console.warn('Failed to save activity data', e);
+      console.warn('Failed to add activity day', e);
+    }
+  }
+
+  // Remove activity day from backend
+  async function removeActivityDay(dateKey) {
+    try {
+      console.log('Removing activity day:', dateKey);
+      const res = await fetch('/activity', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: dateKey })
+      });
+      if (res.ok) {
+        console.log('Activity day removed successfully');
+      } else {
+        console.error('Failed to remove activity day, status:', res.status);
+      }
+    } catch (e) {
+      console.warn('Failed to remove activity day', e);
     }
   }
 
@@ -1628,7 +1655,7 @@
     if (!activeDays.has(dateKey)) {
       activeDays.add(dateKey);
       console.log('New active day added. Total active days:', activeDays.size);
-      saveActivityData();
+      addActivityDay(dateKey);
       renderCalendar();
     } else {
       console.log('Day already marked as active');
@@ -1726,14 +1753,14 @@
   if (prevMonthBtn) {
     prevMonthBtn.addEventListener('click', () => {
       currentDate.setMonth(currentDate.getMonth() - 1);
-      renderCalendar();
+      loadActivityData(getCurrentMonthKey());
     });
   }
 
   if (nextMonthBtn) {
     nextMonthBtn.addEventListener('click', () => {
       currentDate.setMonth(currentDate.getMonth() + 1);
-      renderCalendar();
+      loadActivityData(getCurrentMonthKey());
     });
   }
 
@@ -1756,19 +1783,20 @@
       if (activeDays.has(dateKey)) {
         activeDays.delete(dateKey);
         console.log('Removed active day:', dateKey);
+        removeActivityDay(dateKey);
       } else {
         activeDays.add(dateKey);
         console.log('Added active day:', dateKey);
+        addActivityDay(dateKey);
       }
 
       console.log('Total active days:', activeDays.size);
-      
-      // Save and re-render
-      saveActivityData();
+
+      // Re-render
       renderCalendar();
     });
   }
 
-  // Initial render
-  loadActivityData();
+  // Initial render - load current month
+  loadActivityData(getCurrentMonthKey());
 })();

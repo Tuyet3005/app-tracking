@@ -32,3 +32,11 @@ export const camProgresses = sqliteTable(
     uniqueIndex("uniqueProgress").on(t.userId, t.cambridgeVersion, t.partName, t.testName),
   ],
 );
+
+export const userActiveLog = sqliteTable("userActiveLog", {
+  id: int().primaryKey(),
+  userId: int().references(() => users.id).notNull(),
+  date: text().notNull(),
+}, (t) => [
+  uniqueIndex("uniqueUserDate").on(t.userId, t.date),
+]);

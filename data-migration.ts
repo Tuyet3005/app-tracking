@@ -54,14 +54,7 @@ import { and, eq } from "drizzle-orm";
     existing.partName === val.partName &&
     existing.testName === val.testName
   ));
-  const updatingVals = vals.filter((val) => existingProgress.some((existing) =>
-    existing.cambridgeVersion === val.cambridgeVersion &&
-    existing.partName === val.partName &&
-    existing.testName === val.testName &&
-    (existing.result !== val.result || existing.needReview !== val.needReview)
-  ));
   console.log("New progress entries to insert:", newVals.length);
-  console.log("Updated progress entries:", updatingVals.length);
 
   let i = 1;
   for (const val of newVals) {
@@ -71,20 +64,18 @@ import { and, eq } from "drizzle-orm";
     i++;
     await db.insert(schema.camProgresses).values(val);
   }
-  i = 1;
-  for (const val of updatingVals) {
-    if (i === 1 || i % 50 === 0) {
-      console.log(`Processing ${i}/${updatingVals.length}...`);
-    }
-    i++;
-    await db.update(schema.camProgresses)
-      .set({ result: val.result, needReview: val.needReview })
-      .where(and(
-        eq(schema.camProgresses.userId, val.userId),
-        eq(schema.camProgresses.cambridgeVersion, val.cambridgeVersion),
-        eq(schema.camProgresses.partName, val.partName),
-        eq(schema.camProgresses.testName, val.testName),
-      ));
+  
+  console.log("Migrating activity log");
+
+  const activityData = await get("daybyday.json", "string");
+  const activity = JSON.parse(activityData.data || "{}");
+  console.log("Active days in progress:", activity.activeDays?.length || 0);
+
+  for (const date of activity.activeDays || []) {
+    await db.insert(schema.userActiveLog).values({
+      userId,
+      date,
+    }).onConflictDoNothing();
   }
 
   console.log("Migration complete");

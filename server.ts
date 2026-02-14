@@ -6,7 +6,7 @@ import path from 'path';
 import * as blobClient from '@tigrisdata/storage';
 import { db, schema } from './db/index.js';
 import { DrizzleStore } from './drizzle-session-store.js';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, like } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
 import fs from 'fs';
 
@@ -495,17 +495,48 @@ app.post('/activity', requireAuth, async (req, res) => {
   }
 });
 
+app.patch('/activity', requireAuth, async (req, res) => {
+  const { date } = req.body;
+  if (!date) return res.status(400).json({ error: 'activeDate is required' });
+
+  await db.insert(schema.userActiveLog).values({
+    userId: req.session.userId,
+    date: date,
+  }).onConflictDoNothing();
+  res.json({ success: true });
+});
+
+app.delete('/activity', requireAuth, async (req, res) => {
+  const { date } = req.body;
+  if (!date) return res.status(400).json({ error: 'activeDate is required' });
+
+  await db.delete(schema.userActiveLog).where(and(
+    eq(schema.userActiveLog.userId, req.session.userId),
+    eq(schema.userActiveLog.date, date)
+  ));
+  res.json({ success: true });
+});
+
 // Get activity data
 app.get('/activity', requireAuth, async (req, res) => {
-  try {
-    const data = await readFile(BLOB_KEY_ACTIVITY);
-    const parsed = JSON.parse(data);
-    console.log('Loaded activity data from storage:', parsed);
-    return res.json(parsed);
-  } catch (err) {
-    console.log('No activity file found, returning empty array');
-    return res.json({ activeDays: [], lastModified: null });
+  let { month } = req.query; // format: YYYY-MM
+  
+  if (!month) {
+    month = new Date().toISOString().slice(0, 7); // default to current month
   }
+  
+  const activeDays = await db
+    .select()
+    .from(schema.userActiveLog)
+    .where(
+      and(
+        eq(schema.userActiveLog.userId, req.session.userId),
+        like(schema.userActiveLog.date, `${month}-%`),
+      ),
+    )
+    .then((rows) => rows.map((r) => r.date));
+
+  return res.json({ activeDays });
 });
 
 if (process.env.NODE_ENV !== 'production') {
