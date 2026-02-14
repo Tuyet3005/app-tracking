@@ -111,6 +111,7 @@ export class DrizzleStore extends Store {
   // The callback should be called as callback(error) once the session has been set in the store.
   async set(sid: string, sess: SessionData, cb?: Callback) {
     const { expiresAt, isExpired } = this.getExpiresAt(sess);
+    const { cookie, ...sessionData } = sess;
 
     try {
       if (isExpired) {
@@ -122,16 +123,16 @@ export class DrizzleStore extends Store {
         .values({
           id: sid,
           userId: sess.userId || null,
-          cookies: JSON.stringify(sess.cookie),
-          sessionData: JSON.stringify(sess),
+          cookies: JSON.stringify(cookie),
+          sessionData: JSON.stringify(sessionData),
           expiresAt,
         })
         .onConflictDoUpdate({
           target: schema.sessions.id,
           set: {
             userId: sess.userId || null,
-            cookies: JSON.stringify(sess.cookie),
-            sessionData: JSON.stringify(sess),
+            cookies: JSON.stringify(cookie),
+            sessionData: JSON.stringify(sessionData),
             expiresAt,
           },
         });

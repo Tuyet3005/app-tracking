@@ -26,7 +26,7 @@ app.use(express.static(path.join(import.meta.dirname, 'public'), {
 app.use(session({
   secret: process.env.SESSION_SECRET || 'default_secret',
   resave: false,
-  saveUninitialized: false,
+  saveUninitialized: true,
   cookie: (req) => {
     var match = req.url.match(/^\/([^/]+)/);
     return {
