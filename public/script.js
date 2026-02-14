@@ -1,10 +1,16 @@
-// old echo form removed; no-op
+import { addBlurOrEnterListener } from "./utils.js";
 
 // Constants for save statuses
 const SAVING_STATUSES = {
   SAVING: "saving",
   SAVED: "saved",
   ERROR: "error",
+};
+
+const SAVING_STATUS_TEXT = {
+  [SAVING_STATUSES.SAVING]: "Saving…",
+  [SAVING_STATUSES.SAVED]: "Saved",
+  [SAVING_STATUSES.ERROR]: "Save failed",
 };
 
 // Logout functionality
@@ -38,84 +44,62 @@ const SAVING_STATUSES = {
 // User name box: save with progress and show saved state
 (() => {
   // Clear cloud input on page load
-  feelingInput.value = "";
-  const nameInput = document.getElementById("usernameBox");
-  const saveLabel = document.getElementById("usernameSave");
+  const nameInput = /** @type {HTMLInputElement} */ (
+    document.getElementById("usernameBox")
+  );
   if (!nameInput) return;
 
-  let nameTimer = null;
-  function markSaved() {
-    if (saveLabel) saveLabel.textContent = "Saved";
-  }
-  function markSaving() {
-    if (saveLabel) saveLabel.textContent = "Saving…";
-  }
-  function markError() {
-    if (saveLabel) saveLabel.textContent = "Error";
+  /**
+   * @param {string} name
+   */
+  function showDisplayName(name) {
+    document.title = `🌼IELTS Orange tracking 🌼 --- ${name}`;
+
+    const displayNameSpan = document.getElementById("displayName");
+    if (displayNameSpan) {
+      displayNameSpan.textContent = name;
+    }
   }
 
   // Load user display name on page load
   async function loadUserDisplayName() {
     try {
       const response = await fetch("/me");
-      if (response.ok) {
-        const user = await response.json();
-        // Keep the app title / header showing the real display name,
-        // but display a friendly credit in the username box.
-        const displayName = user.displayName || '';
-        nameInput.value = 'dev by Tuyết 🎐';
-        const appTitle = document.getElementById('appTitle');
-        const appHeader = document.getElementById('appHeader');
-        const displayNameSpan = document.getElementById('displayName');
-        if (appTitle) {
-          appTitle.textContent = `🌼IELTS Orange tracking 🌼 --- ${displayName}`;
-        }
-        if (appHeader && displayNameSpan) {
-          displayNameSpan.textContent = displayName;
-        }
 
-        // Show Manage button only for user with username 'tuyet'
-        try {
-          const manageBtn = document.getElementById("manageBtn");
-          if (manageBtn) {
-            const uname = (user.username || "").toString().toLowerCase();
-            if (uname === "tuyet") {
-              manageBtn.style.display = "";
-            } else {
-              manageBtn.style.display = "none";
-            }
-          }
-        } catch (e) {
-          // ignore
-        }
-        markSaved();
-      } else {
-        console.warn("Failed to load user display name");
+      if (response.status === 401) {
+        // Not logged in, redirect to login page
         window.location.href = "/login.html";
+        return;
+      }
+
+      const user = await response.json();
+      const displayName = user.displayName || "";
+
+      nameInput.value = "dev by Tuyết 🎐";
+
+      showDisplayName(displayName);
+
+      // Show Manage button only for user with username 'tuyet'
+      const manageBtn = document.getElementById("manageBtn");
+      if (manageBtn) {
+        const uname = (user.username || "").toString().toLowerCase();
+        manageBtn.style.display = uname === "tuyet" ? "" : "none";
       }
     } catch (error) {
       console.error("Error loading user display name:", error);
-      markError();
     }
   }
 
   // Save display name to server
   async function saveDisplayName() {
     const displayName = nameInput.value.trim();
-    // Update app name in title and header live as user types
-    const appTitle = document.getElementById("appTitle");
-    const appHeader = document.getElementById("appHeader");
-    const displayNameSpan = document.getElementById("displayName");
-    if (appTitle) {
-      appTitle.textContent = `🌼IELTS Orange tracking 🌼 --- ${displayName}`;
-    }
-    if (appHeader && displayNameSpan) {
-      displayNameSpan.textContent = displayName;
-    }
+
     if (!displayName) {
-      markError();
+      setProgressStatus(SAVING_STATUSES.ERROR);
       return;
     }
+
+    showDisplayName(displayName);
 
     try {
       const response = await fetch("/me", {
@@ -127,25 +111,18 @@ const SAVING_STATUSES = {
       });
 
       if (response.ok) {
-        const result = await response.json();
-        markSaved();
+        setProgressStatus(SAVING_STATUSES.SAVED);
       } else {
         console.error("Failed to update display name");
-        markError();
+        setProgressStatus(SAVING_STATUSES.ERROR);
       }
     } catch (error) {
       console.error("Error updating display name:", error);
-      markError();
+      setProgressStatus(SAVING_STATUSES.ERROR);
     }
   }
 
-  nameInput.addEventListener("input", () => {
-    markSaving();
-    if (nameTimer) clearTimeout(nameTimer);
-    nameTimer = setTimeout(() => {
-      saveDisplayName();
-    }, 600);
-  });
+  addBlurOrEnterListener(nameInput, saveDisplayName);
 
   // Load display name when page loads
   loadUserDisplayName();
@@ -424,24 +401,6 @@ const SAVING_STATUSES = {
   let lastSavedState = null;
   let isLoaded = false; // becomes true after initial loadProgress() completes
   // UI helper for progress save status
-  function setProgressStatus(state, text) {
-    const el = document.getElementById("progressSaveStatus");
-    if (!el) return;
-    el.classList.remove(
-      SAVING_STATUSES.SAVED,
-      SAVING_STATUSES.SAVING,
-      SAVING_STATUSES.ERROR,
-    );
-    el.classList.add(state);
-    if (typeof text === "string") el.textContent = text;
-    // Refresh backup status when save completes (not while saving)
-    if (
-      state !== SAVING_STATUSES.SAVING &&
-      typeof window.refreshBackupStatus === "function"
-    ) {
-      window.refreshBackupStatus();
-    }
-  }
   function scheduleSave() {
     if (!isLoaded) return; // do not schedule saves before initial load
     if (saveTimer) clearTimeout(saveTimer);
@@ -980,13 +939,11 @@ const SAVING_STATUSES = {
   }
 
   // Minimize button click handler
-  if (minimizeBtn) {
-    minimizeBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      cloudWidget.classList.add("collapsed");
-      localStorage.setItem("cloudCollapsed", "true");
-    });
-  }
+  minimizeBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    cloudWidget.classList.add("collapsed");
+    localStorage.setItem("cloudCollapsed", "true");
+  });
 
   // Cloud image click handler (when collapsed, expand it)
   if (cloudImg) {
@@ -2120,61 +2077,6 @@ const SAVING_STATUSES = {
   const backupStatus = document.getElementById("backupStatus");
   if (!backupStatus) return;
 
-  async function loadBackupStatus() {
-    try {
-      const res = await fetch("/backup");
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.lastBackup) {
-          const backupDate = new Date(data.lastBackup);
-          const now = new Date();
-          const diffMs = now - backupDate;
-          const diffMins = Math.floor(diffMs / 60000);
-          const diffHours = Math.floor(diffMs / 3600000);
-          const diffDays = Math.floor(diffMs / 86400000);
-
-          let timeAgo = "";
-          if (diffMins < 1) {
-            timeAgo = "just now";
-          } else if (diffMins < 60) {
-            timeAgo = `${diffMins} min${diffMins > 1 ? "s" : ""} ago`;
-          } else if (diffHours < 24) {
-            timeAgo = `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
-          } else {
-            timeAgo = `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
-          }
-
-          // Format the exact date for tooltip
-          const formattedDate = backupDate.toLocaleString("en-GB", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          });
-
-          backupStatus.textContent = `💾 Last backup: ${timeAgo}`;
-          backupStatus.title = `Backup at ${formattedDate}`;
-          backupStatus.style.color = "#10b981";
-        } else {
-          backupStatus.textContent = "💾 No backup yet";
-          backupStatus.style.color = "#9ca3af";
-        }
-      } else {
-        backupStatus.textContent = "💾 Backup info unavailable";
-        backupStatus.style.color = "#ef4444";
-      }
-    } catch (e) {
-      console.warn("Failed to load backup status", e);
-      backupStatus.textContent = "💾 Backup check failed";
-      backupStatus.style.color = "#ef4444";
-    }
-  }
-
-  // Expose loadBackupStatus globally so it can be called when saves complete
-  window.refreshBackupStatus = loadBackupStatus;
-
   // Manual backup button handler
   const manualBackupBtn = document.getElementById("manualBackupBtn");
   if (manualBackupBtn) {
@@ -2211,7 +2113,7 @@ const SAVING_STATUSES = {
         // Re-enable button after 2 seconds
         setTimeout(() => {
           manualBackupBtn.disabled = false;
-          manualBackupBtn.textContent = "🔄 Backup Now";
+          manualBackupBtn.textContent = "� Backup Now";
           manualBackupBtn.style.opacity = "1";
         }, 2000);
       }
@@ -2224,3 +2126,80 @@ const SAVING_STATUSES = {
   // Refresh backup status every 1 minute
   setInterval(loadBackupStatus, 60000);
 })();
+
+/**
+ * @param {typeof SAVING_STATUSES[keyof typeof SAVING_STATUSES]} state
+ * @param {string | null} text
+ */
+function setProgressStatus(state, text = null) {
+  const el = document.getElementById("progressSaveStatus");
+  if (!el) return;
+
+  el.classList.remove(
+    SAVING_STATUSES.SAVED,
+    SAVING_STATUSES.SAVING,
+    SAVING_STATUSES.ERROR,
+  );
+  el.classList.add(state);
+  el.textContent = text || SAVING_STATUS_TEXT[state] || "";
+
+  // Refresh backup status when save completes (not while saving)
+  if (state !== SAVING_STATUSES.SAVING) {
+    loadBackupStatus();
+  }
+}
+
+async function loadBackupStatus() {
+  const backupStatus = document.getElementById("backupStatus");
+  if (!backupStatus) return;
+
+  try {
+    const res = await fetch("/backup");
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.lastBackup) {
+        const backupDate = new Date(data.lastBackup);
+        const now = new Date();
+        const diffMs = now.getTime() - backupDate.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        let timeAgo = "";
+        if (diffMins < 1) {
+          timeAgo = "just now";
+        } else if (diffMins < 60) {
+          timeAgo = `${diffMins} min${diffMins > 1 ? "s" : ""} ago`;
+        } else if (diffHours < 24) {
+          timeAgo = `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+        } else {
+          timeAgo = `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+        }
+
+        // Format the exact date for tooltip
+        const formattedDate = backupDate.toLocaleString("en-GB", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        });
+
+        backupStatus.textContent = `💾 Last backup: ${timeAgo}`;
+        backupStatus.title = `Backup at ${formattedDate}`;
+        backupStatus.style.color = "#10b981";
+      } else {
+        backupStatus.textContent = "💾 No backup yet";
+        backupStatus.style.color = "#9ca3af";
+      }
+    } else {
+      backupStatus.textContent = "� Backup info unavailable";
+      backupStatus.style.color = "#ef4444";
+    }
+  } catch (e) {
+    console.warn("Failed to load backup status", e);
+    backupStatus.textContent = "💾 Backup check failed";
+    backupStatus.style.color = "#ef4444";
+  }
+}
