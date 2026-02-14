@@ -1448,27 +1448,69 @@ const SAVING_STATUSES = {
     return div.innerHTML;
   }
 
-  async function saveTodos() {
+  // Create a new todo
+  async function createTodo(text) {
     try {
       setTodoStatus(SAVING_STATUSES.SAVING, 'Saving…');
-      console.log('Saving todos:', todos);
       const res = await fetch('/todos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ todos })
+        body: JSON.stringify({ text, completed: false })
       });
       if (res.ok) {
-        const result = await res.json();
-        console.log('Save result:', result);
+        setTodoStatus(SAVING_STATUSES.SAVED, 'Saved ✓');
+        setTimeout(() => setTodoStatus('', ''), 2000);
+        // Reload todos to get the new one with its ID
+        await loadTodos();
+      } else {
+        setTodoStatus(SAVING_STATUSES.ERROR, 'Save failed');
+        console.warn('Failed to create todo', await res.text());
+      }
+    } catch (err) {
+      setTodoStatus(SAVING_STATUSES.ERROR, 'Save failed');
+      console.warn('Failed to create todo', err);
+    }
+  }
+
+  // Update a todo (text or completed status)
+  async function updateTodo(id, updates) {
+    try {
+      setTodoStatus(SAVING_STATUSES.SAVING, 'Saving…');
+      const res = await fetch(`/todos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+      if (res.ok) {
         setTodoStatus(SAVING_STATUSES.SAVED, 'Saved ✓');
         setTimeout(() => setTodoStatus('', ''), 2000);
       } else {
         setTodoStatus(SAVING_STATUSES.ERROR, 'Save failed');
-        console.warn('Failed to save todos', await res.text());
+        console.warn('Failed to update todo', await res.text());
       }
     } catch (err) {
       setTodoStatus(SAVING_STATUSES.ERROR, 'Save failed');
-      console.warn('Failed to save todos', err);
+      console.warn('Failed to update todo', err);
+    }
+  }
+
+  // Delete a todo
+  async function deleteTodo(id) {
+    try {
+      setTodoStatus(SAVING_STATUSES.SAVING, 'Saving…');
+      const res = await fetch(`/todos/${id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        setTodoStatus(SAVING_STATUSES.SAVED, 'Saved ✓');
+        setTimeout(() => setTodoStatus('', ''), 2000);
+      } else {
+        setTodoStatus(SAVING_STATUSES.ERROR, 'Save failed');
+        console.warn('Failed to delete todo', await res.text());
+      }
+    } catch (err) {
+      setTodoStatus(SAVING_STATUSES.ERROR, 'Save failed');
+      console.warn('Failed to delete todo', err);
     }
   }
 
@@ -1479,10 +1521,10 @@ const SAVING_STATUSES = {
         const data = await res.json();
         console.log('Loaded todos data:', data);
         if (data && Array.isArray(data.todos)) {
-          todos = data.todos;
-          // Ensure all todos have createdAt
-          todos = todos.map(todo => ({
+          // Convert database format (completed: 0/1) to boolean
+          todos = data.todos.map(todo => ({
             ...todo,
+            completed: !!todo.completed, // Convert 0/1 to boolean
             createdAt: todo.createdAt || new Date().toISOString()
           }));
           console.log('Todos after load:', todos);
@@ -1494,21 +1536,12 @@ const SAVING_STATUSES = {
     }
   }
 
-  function addTodo() {
+  async function addTodo() {
     const text = todoInput.value.trim();
     if (!text) return;
 
-    const newTodo = {
-      id: Date.now().toString(),
-      text: text,
-      completed: false,
-      createdAt: new Date().toISOString()
-    };
-
-    todos.push(newTodo);
     todoInput.value = '';
-    renderTodos();
-    saveTodos();
+    await createTodo(text);
   }
 
   // Add todo on button click
@@ -1523,35 +1556,58 @@ const SAVING_STATUSES = {
   });
 
   // Toggle complete and delete using event delegation on both lists
-  function handleTodoClick(e) {
+  async function handleTodoClick(e) {
     const checkbox = e.target.closest('.todo-checkbox');
     const deleteBtn = e.target.closest('.todo-delete');
-    const todoText = e.target.closest('.todo-text');
 
     if (checkbox) {
       const id = checkbox.getAttribute('data-id');
-      const todo = todos.find(t => t.id === id);
+      const todo = todos.find(t => t.id == id); // Use == for type coercion
+      console.log('Toggle complete - ID:', id, 'Found todo:', todo);
       if (todo) {
-        todo.completed = !todo.completed;
+        const newCompleted = !todo.completed;
+        // Update locally first for immediate UI feedback
+        todo.completed = newCompleted;
         renderTodos();
-        saveTodos();
+        // Then sync with server
+        await updateTodo(id, { completed: newCompleted });
       }
     } else if (deleteBtn) {
       const id = deleteBtn.getAttribute('data-id');
-      todos = todos.filter(t => t.id !== id);
+      console.log('Delete - ID:', id, 'Before filter:', todos.length);
+      // Remove from local array first for immediate UI feedback
+      todos = todos.filter(t => t.id != id); // Use != for type coercion
+      console.log('After filter:', todos.length);
       renderTodos();
-      saveTodos();
+      // Then sync with server
+      await deleteTodo(id);
     }
   }
 
   // Handle double click to edit todo text
   function handleTodoDoubleClick(e) {
+    console.log('Double-click event:', e);
     const todoText = e.target.closest('.todo-text');
-    if (!todoText) return;
+    console.log('Found todoText element:', todoText);
 
-    const id = todoText.closest('.todo-item').getAttribute('data-id');
-    const todo = todos.find(t => t.id === id);
-    if (!todo) return;
+    if (!todoText) {
+      console.log('No .todo-text element found, returning');
+      return;
+    }
+
+    const todoItem = todoText.closest('.todo-item');
+    console.log('Found todoItem:', todoItem);
+
+    const id = todoItem?.getAttribute('data-id');
+    console.log('Todo ID:', id);
+
+    const todo = todos.find(t => t.id == id); // Use == instead of === for type coercion
+    console.log('Found todo:', todo);
+
+    if (!todo) {
+      console.log('No matching todo found, returning');
+      return;
+    }
 
     // Create input element
     const input = document.createElement('input');
@@ -1559,20 +1615,27 @@ const SAVING_STATUSES = {
     input.className = 'todo-edit-input';
     input.value = todo.text;
 
+    console.log('Created input, replacing todoText element');
+
     // Replace text with input
-    const todoItem = todoText.closest('.todo-item');
     todoText.replaceWith(input);
     input.focus();
     input.select();
 
+    console.log('Input should now be visible and focused');
+
     // Save on Enter or blur
-    function saveEdit() {
+    async function saveEdit() {
       const newText = input.value.trim();
       if (newText && newText !== todo.text) {
+        // Update locally first
         todo.text = newText;
-        saveTodos();
+        renderTodos();
+        // Then sync with server
+        await updateTodo(id, { text: newText });
+      } else {
+        renderTodos();
       }
-      renderTodos();
     }
 
     input.addEventListener('keydown', (e) => {

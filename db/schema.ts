@@ -15,6 +15,15 @@ export const sessions = sqliteTable("sessions", {
   expiresAt: int().notNull(),
 });
 
+export const databaseBackups = sqliteTable("databaseBackups", {
+  id: int().primaryKey(),
+  timestamp: int().notNull(),
+  blobKey: text().notNull(),
+  hash: text(),
+}, (t) => [
+  uniqueIndex("uniqueBlobKey").on(t.blobKey),
+]);
+
 export const camProgresses = sqliteTable(
   "camProgresses",
   {
@@ -41,17 +50,17 @@ export const userActiveLog = sqliteTable("userActiveLog", {
   uniqueIndex("uniqueUserDate").on(t.userId, t.date),
 ]);
 
-export const databaseBackups = sqliteTable("databaseBackups", {
+export const todoItems = sqliteTable("todoItems", {
   id: int().primaryKey(),
-  timestamp: int().notNull(),
-  blobKey: text().notNull(),
-  hash: text(),
-}, (t) => [
-  uniqueIndex("uniqueBlobKey").on(t.blobKey),
-]);
+  userId: int().references(() => users.id).notNull(),
+  text: text().notNull(),
+  completed: int().default(0).notNull(),
+  createdAt: text().notNull(),
+});
 
 export const backupTables = {
   users,
   camProgresses,
   userActiveLog,
+  todoItems,
 }

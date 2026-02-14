@@ -518,38 +518,59 @@ app.get('/notes', requireAuth, async (req, res) => {
   }
 });
 
-// Save todos
 app.post('/todos', requireAuth, async (req, res) => {
-  const { todos } = req.body;
-  console.log('Received todos to save:', todos);
-  const data = { 
-    todos: Array.isArray(todos) ? todos : [], 
-    lastModified: new Date().toISOString() 
-  };
-  const payload = JSON.stringify(data, null, 2);
+  const {text, completed} = req.body;
+  if (!text) return res.status(400).json({ error: 'Text is required' });
+
+  await db.insert(schema.todoItems).values({
+    userId: req.session.userId,
+    text,
+    completed: completed ? 1 : 0,
+    createdAt: new Date().toISOString(),
+  });
   
-  try {
-    await writeFile(BLOB_KEY_TODOS, payload);
-    console.log('Todos saved successfully');
-    res.json({ ok: true });
-  } catch (err) {
-    console.error('Failed to save todos:', err);
-    res.status(500).json({ error: 'Failed to save todos' });
-  }
+  res.json({ ok: true });
 });
 
-// Get todos
-app.get('/todos', requireAuth, async (req, res) => {
-  try {
-    const data = await readFile(BLOB_KEY_TODOS);
-    const parsed = JSON.parse(data);
-    console.log('Loaded todos from storage:', parsed);
-    return res.json(parsed);
-  } catch (err) {
-    console.log('No todos file found, returning empty array');
-    // Return empty todos if file doesn't exist yet
-    return res.json({ todos: [], lastModified: null });
+app.patch('/todos/:id', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const { text, completed } = req.body;
+  if (!text && completed === undefined) {
+    return res.status(400).json({ error: 'Text or completed status is required' });
   }
+
+  const updateData = {};
+  if (text) updateData.text = text;
+  if (completed !== undefined) updateData.completed = completed ? 1 : 0;
+
+  const result = await db.update(schema.todoItems)
+    .set(updateData)
+    .where(and(
+      eq(schema.todoItems.id, id),
+      eq(schema.todoItems.userId, req.session.userId)
+    ));
+
+  res.json({ ok: true, updated: result.rowsAffected });
+});
+
+app.delete('/todos/:id', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  await db.delete(schema.todoItems)
+    .where(and(
+      eq(schema.todoItems.id, id),
+      eq(schema.todoItems.userId, req.session.userId)
+    ));
+  res.json({ ok: true });
+});
+
+app.get('/todos', requireAuth, async (req, res) => {
+  return res.json({
+    todos: await db
+      .select()
+      .from(schema.todoItems)
+      .where(eq(schema.todoItems.userId, req.session.userId))
+      .orderBy(desc(schema.todoItems.createdAt)),
+  })
 });
 
 // Save activity data
