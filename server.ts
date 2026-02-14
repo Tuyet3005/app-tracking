@@ -41,6 +41,9 @@ if (process.env.NODE_ENV === 'production') {
 app.use(express.static(path.join(process.cwd(), 'public')));
 
 app.get('/', (req, res) => {
+  if (!req.session?.userId) {
+    return res.redirect('/login.html');
+  }
   res.redirect('/index.html');
 });
 
