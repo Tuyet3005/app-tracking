@@ -47,8 +47,8 @@ app.get('/', (req, res) => {
   res.redirect('/index.html');
 });
 
-const BACKUP_INTERVAL = 1000 * 60 * 5; // 5 minutes
-app.use(async (req, res, next) => {
+const BACKUP_INTERVAL = 1000 * 60 * 60; // 1 hour
+app.get('/api/cron', async (req, res) => {
   const { needsBackup, backupBlobKey, lastBackupHash, lastBackupBlobKey } =
     await db.transaction(async (tx) => {
       const lastBackupTs = await tx
@@ -123,7 +123,7 @@ app.use(async (req, res, next) => {
     }
   }
   
-  next();
+  res.json({ success: true, needsBackup, backupBlobKey });
 });
 
 // Authentication middleware
