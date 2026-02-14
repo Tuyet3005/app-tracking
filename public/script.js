@@ -1,5 +1,33 @@
 // old echo form removed; no-op
 
+// Logout functionality
+(() => {
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (!logoutBtn) return;
+
+  logoutBtn.addEventListener('click', async () => {
+    if (!confirm('Are you sure you want to logout?')) return;
+
+    try {
+      const response = await fetch('/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        window.location.href = '/login.html';
+      } else {
+        alert('Failed to logout. Please try again.');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      alert('An error occurred during logout.');
+    }
+  });
+})();
+
 // User name box: save with progress and show saved state
 (() => {
     // Clear cloud input on page load

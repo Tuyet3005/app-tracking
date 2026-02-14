@@ -17,6 +17,9 @@
     .vocab-btn { display:inline-flex; align-items:center; gap:6px; padding:10px 20px; border-radius:999px; border:2px solid rgba(255,255,255,0.5); background: linear-gradient(135deg, #b5c7ff 0%, #d4b5f0 30%, #ffc8f0 60%, #b5e9ff 100%); color:#2d3748; font-size:0.92rem; font-weight:700; text-decoration:none; box-shadow:0 6px 16px rgba(181,199,255,0.3), 0 3px 10px rgba(212,181,240,0.25); transition:all 220ms ease; cursor:pointer }
     .vocab-btn:hover { transform:translateY(-3px) scale(1.02); box-shadow:0 10px 24px rgba(181,199,255,0.4), 0 5px 14px rgba(212,181,240,0.35), 0 0 25px rgba(255,200,240,0.25); background: linear-gradient(135deg, #a5b7ff 0%, #c4a5e0 30%, #ffb8e0 60%, #a5d9ff 100%) }
     .vocab-btn:active { transform:translateY(-1px) scale(0.98) }
+    .logout-btn { display:inline-flex; align-items:center; gap:6px; padding:10px 20px; border-radius:999px; border:2px solid rgba(255,99,99,0.3); background: linear-gradient(135deg, #ff6b9d 0%, #ff8a9d 50%, #ffa5b4 100%); color:#fff; font-size:0.92rem; font-weight:700; cursor:pointer; box-shadow:0 6px 16px rgba(255,107,157,0.3), 0 3px 10px rgba(255,107,157,0.25); transition:all 220ms ease }
+    .logout-btn:hover { transform:translateY(-3px) scale(1.02); box-shadow:0 10px 24px rgba(255,107,157,0.4), 0 5px 14px rgba(255,107,157,0.35); background: linear-gradient(135deg, #ff5b8d 0%, #ff7a8d 50%, #ff95a4 100%) }
+    .logout-btn:active { transform:translateY(-1px) scale(0.98) }
     .progress-save { display:inline-flex; align-items:center; gap:8px; color:var(--muted); font-size:0.85rem; padding:4px 8px; border-radius:999px }
     .progress-save.saved { color: #10b981; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.12) }
     .progress-save.saving { color: #f59e0b; background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.12) }
@@ -1065,6 +1068,7 @@
     <a href="https://english-vocab-tracker.vercel.app/" target="_blank" class="vocab-btn">📖 Learn vocab</a>
     <a href="https://app-vocab.vercel.app/" target="_blank" class="vocab-btn">📚 Check vocab</a>
     <a href="https://app-auto-separate.vercel.app/" target="_blank" class="vocab-btn">🛠️ Format vocab</a>
+    <button id="logoutBtn" class="logout-btn">🔐 Logout</button>
     <div id="usernameSave" class="username-save">Saved</div>
     <div id="progressSaveStatus" class="progress-save saved" aria-live="polite">Saved</div>
   </div>
