@@ -25,19 +25,24 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'default_secret',
   resave: false,
   saveUninitialized: true,
-  cookie: (req) => {
-    var match = req.url.match(/^\/([^/]+)/);
-    return {
-      path: match ? '/' + match[1] : '/',
-      httpOnly: true,
-      secure: req.secure || false,
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-    }
+  cookie: {
+    path: '/',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
   },
   store: new DrizzleStore(),
 }));
 
-app.use(express.static(path.join(import.meta.dirname, 'public')));
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1); // Trust first proxy for secure cookies
+}
+
+app.use(express.static(path.join(process.cwd(), 'public')));
+
+app.get('/', (req, res) => {
+  res.redirect('/index.html');
+});
 
 // Authentication middleware
 function requireAuth(req, res, next) {
