@@ -60,12 +60,13 @@ const SAVING_STATUSES = {
       const response = await fetch("/me");
       if (response.ok) {
         const user = await response.json();
-        nameInput.value = user.displayName || "";
-        // Update app name in title and header
-        const displayName = user.displayName || "";
-        const appTitle = document.getElementById("appTitle");
-        const appHeader = document.getElementById("appHeader");
-        const displayNameSpan = document.getElementById("displayName");
+        // Keep the app title / header showing the real display name,
+        // but display a friendly credit in the username box.
+        const displayName = user.displayName || '';
+        nameInput.value = 'dev by Tuyết 🎐';
+        const appTitle = document.getElementById('appTitle');
+        const appHeader = document.getElementById('appHeader');
+        const displayNameSpan = document.getElementById('displayName');
         if (appTitle) {
           appTitle.textContent = `🌼IELTS Orange tracking 🌼 --- ${displayName}`;
         }

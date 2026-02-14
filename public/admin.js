@@ -22,6 +22,7 @@
     const usersPre = document.getElementById('usersPre');
     if (refreshBtn && usersPre) {
       refreshBtn.addEventListener('click', async () => {
+        usersPre.classList.add('cute-pre');
         usersPre.textContent = 'Loading...';
         try {
           const r = await fetch('/admin/users/public');
@@ -49,16 +50,27 @@
       if (!impersonateBody) return;
       impersonateBody.innerHTML = '';
       if (!users || users.length === 0) {
-        impersonateBody.innerHTML = '<tr><td colspan="3">No users</td></tr>';
+        impersonateBody.innerHTML = '<tr><td colspan="4">No users</td></tr>';
         return;
       }
       users.forEach(u => {
         const tr = document.createElement('tr');
+        tr.classList.add('impersonate-row');
+        const tdAvatar = document.createElement('td');
+        const span = document.createElement('span');
+        span.classList.add('avatar');
+        // simple color choice based on username hash
+        const nameKey = (u.username || '').toLowerCase();
+        const sum = nameKey.split('').reduce((s,ch)=>s+ch.charCodeAt(0),0);
+        span.classList.add((sum % 2 === 0) ? 'ice' : 'pink');
+        span.textContent = (u.username || 'U').slice(0,1).toUpperCase();
+        tdAvatar.appendChild(span);
         const tdUser = document.createElement('td'); tdUser.textContent = u.username || '';
         const tdDisplay = document.createElement('td'); tdDisplay.textContent = u.displayName || '';
         const tdAct = document.createElement('td');
         const btn = document.createElement('button');
         btn.textContent = 'Đăng nhập';
+        btn.classList.add('vocab-btn');
         btn.addEventListener('click', async () => {
           if (!confirm(`Impersonate ${u.username}?`)) return;
           try {
@@ -78,9 +90,12 @@
           }
         });
         tdAct.appendChild(btn);
+        tr.appendChild(tdAvatar);
         tr.appendChild(tdUser);
         tr.appendChild(tdDisplay);
         tr.appendChild(tdAct);
+        tdUser.style.textAlign = 'left';
+        tdDisplay.style.textAlign = 'left';
         impersonateBody.appendChild(tr);
       });
     }
@@ -101,7 +116,7 @@
         total = js.total || (Array.isArray(users) ? users.length : 0);
         renderUsers(users);
       } catch (e) {
-        if (impersonateBody) impersonateBody.innerHTML = '<tr><td colspan="3">Error loading users</td></tr>';
+        if (impersonateBody) impersonateBody.innerHTML = '<tr><td colspan="4">Error loading users</td></tr>';
         console.error('Load impersonate error', e);
       }
     }
