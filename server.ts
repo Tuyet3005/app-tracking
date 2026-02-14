@@ -27,9 +27,14 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'default_secret',
   resave: false,
   saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
+  cookie: (req) => {
+    var match = req.url.match(/^\/([^/]+)/);
+    return {
+      path: match ? '/' + match[1] : '/',
+      httpOnly: true,
+      secure: req.secure || false,
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    }
   },
   store: new DrizzleStore(),
 }));
@@ -261,21 +266,21 @@ app.post('/progress', requireAuth, async (req, res) => {
 });
 
 app.patch('/progress', requireAuth, async (req, res) => {
-  const {cambridgeVersion, passageName, testName, result} = req.body || {};
+  const { cambridgeVersion, partName, testName, result } = req.body || {};
   const userId = req.session.userId;
 
-  await db.insert(schema.passagesProgresses).values({
+  await db.insert(schema.camProgresses).values({
     cambridgeVersion,
-    passageName,
+    partName,
     testName,
     userId,
     result,
   }).onConflictDoUpdate({
     targetWhere: and(
-      eq(schema.passagesProgresses.userId, userId),
-      eq(schema.passagesProgresses.passageName, passageName),
-      eq(schema.passagesProgresses.testName, testName),
-      eq(schema.passagesProgresses.cambridgeVersion, cambridgeVersion)
+      eq(schema.camProgresses.userId, userId),
+      eq(schema.camProgresses.partName, partName),
+      eq(schema.camProgresses.testName, testName),
+      eq(schema.camProgresses.cambridgeVersion, cambridgeVersion)
     ),
     set: {
       result,

@@ -15,11 +15,11 @@ export const sessions = sqliteTable("sessions", {
   expiresAt: int().notNull(),
 });
 
-export const passagesProgresses = sqliteTable("passagesProgresses", {
+export const camProgresses = sqliteTable("camProgresses", {
   id: int().primaryKey(),
   userId: int().references(() => users.id).notNull(),
   cambridgeVersion: text().notNull(),
-  passageName: text().notNull(),
+  partName: text().notNull(),
   testName: text().notNull(),
   result: text().default("").notNull(),
   needReview: int().default(0).notNull(),

@@ -637,20 +637,20 @@
     const prevValue = input.getAttribute('data-prev-value') || '';
     const currentValue = (input.value || '').trim();
     
-    const passageName = input.getAttribute('data-passage');
-    const cambrigeVersion = input.getAttribute('data-row');
+    const partName = input.getAttribute('data-passage');
+    const cambridgeVersion = input.getAttribute('data-row');
     const testName = input.getAttribute('data-col');
 
-    fetch('/progress', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        passageName,
-        cambrigeVersion,
-        testName,
-        result: currentValue
-      })
-    });
+    // fetch('/progress', {
+    //   method: 'PATCH',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify({
+    //     partName,
+    //     cambridgeVersion,
+    //     testName,
+    //     result: currentValue
+    //   })
+    // });
     
     onCellInput(e);
     
