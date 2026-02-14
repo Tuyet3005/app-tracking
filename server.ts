@@ -1,11 +1,11 @@
 // @ts-nocheck
-import './env';
+import './env.js';
 import express from 'express';
 import session from 'express-session';
 import path from 'path';
 import * as blobClient from '@tigrisdata/storage';
-import { db, schema } from './db/index';
-import { DrizzleStore } from './drizzle-session-store';
+import { db, schema } from './db/index.js';
+import { DrizzleStore } from './drizzle-session-store.js';
 import { and, eq } from 'drizzle-orm';
 
 const app = express();
@@ -48,6 +48,10 @@ async function readFile(filePath) {
   const r = await blobClient.get(filePath, 'string');
   return r.data;
 }
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
+});
 
 app.post('/echo', (req, res) => {
   const text = req.body.text || '';
@@ -265,6 +269,10 @@ app.get('/activity', async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(port, () => {
+    console.log(`Server running on http://localhost:${port}`);
+  });
+}
+
+export default app;

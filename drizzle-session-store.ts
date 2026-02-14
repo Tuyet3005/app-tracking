@@ -1,6 +1,6 @@
 import { count, eq } from "drizzle-orm";
 import { type SessionData, Store } from "express-session";
-import { db, schema } from "./db";
+import { db, schema } from "./db/index.js";
 
 type Callback = (_err?: unknown, _data?: any) => any;
 function optionalCb(err: unknown, data: unknown, cb?: Callback) {
