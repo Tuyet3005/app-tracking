@@ -249,11 +249,49 @@ app.post('/echo', (req, res) => {
 });
 
 // Return saved progress JSON (if any)
-app.get('/progress', requireAuth, async (req, res) => {
+app.get('/progress/old', requireAuth, async (req, res) => {
   return res.send(await readFile(BLOB_KEY_PROGRESS));
 });
 
-// Save progress (overwrites existing file)
+app.get('/progress', requireAuth, async (req, res) => {
+  const userId = req.session.userId;
+
+  const progresses = await db
+    .select()
+    .from(schema.camProgresses)
+    .where(eq(schema.camProgresses.userId, userId));
+
+  const progressResult = {
+    passages: {},
+    parts: {},
+    cellStates: {},
+  };
+
+  const set = (path, val, ptr = progressResult) => {
+    if (path.length === 1) {
+      ptr[path[0]] = val;
+      return;
+    }
+    if (ptr[path[0]] === undefined) ptr[path[0]] = {};
+    return set(path.slice(1), val, ptr[path[0]]);
+  };
+
+  for (const p of progresses) {
+    const { cambridgeVersion, partName, testName, result, needReview } = p;
+    const path = [
+      partName.toLowerCase().includes("passage") ? "passages" : "parts",
+      partName,
+      cambridgeVersion,
+      testName,
+    ];
+    set(path, result);
+
+    progressResult.cellStates[path.slice(1).join("_")] = !!needReview;
+  }
+
+  return res.json(progressResult);
+});
+
 app.post('/progress', requireAuth, async (req, res) => {
   const body = req.body || {};
   const payload = JSON.stringify(body, null, 2);
@@ -268,8 +306,8 @@ app.patch('/progress', requireAuth, async (req, res) => {
   const userId = req.session.userId;
   
   await db.transaction(async (tx) => {
-    const existing = await tx.select()
-      .from(schema.camProgresses)
+    const updateResult = await tx.update(schema.camProgresses)
+      .set({ result, needReview })
       .where(and(
         eq(schema.camProgresses.userId, userId),
         eq(schema.camProgresses.partName, partName),
@@ -277,11 +315,7 @@ app.patch('/progress', requireAuth, async (req, res) => {
         eq(schema.camProgresses.cambridgeVersion, cambridgeVersion)
       ));
 
-    if (existing.length > 0) {
-      await tx.update(schema.camProgresses)
-        .set({ result, needReview })
-        .where(eq(schema.camProgresses.id, existing[0].id));
-    } else {
+    if (updateResult.rowsAffected === 0) {
       await tx.insert(schema.camProgresses).values({
         cambridgeVersion,
         partName,

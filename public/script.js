@@ -641,6 +641,7 @@
     const cambridgeVersion = input.getAttribute('data-row');
     const testName = input.getAttribute('data-col');
 
+    setProgressStatus('saving', 'Saving…');
     fetch('/progress', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -650,7 +651,9 @@
         testName,
         result: currentValue
       })
-    });
+    })
+      .then(() => setProgressStatus('saved', 'Saved'))
+      .catch(() => setProgressStatus('error', 'Save failed'));
     
     onCellInput(e);
     
@@ -672,7 +675,7 @@
     // Store current value for next comparison
     input.setAttribute('data-prev-value', currentValue);
     
-    saveNow();
+    // saveNow();
   }
 
   function onStatusBtnClick(e, input, td) {
