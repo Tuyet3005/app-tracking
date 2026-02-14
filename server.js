@@ -1,14 +1,11 @@
-const express = require('express');
-const path = require('path');
-const fs = require('fs');
-
-// Load environment from .env.local when present
-try {
-  require('dotenv').config({ path: path.join(__dirname, '.env.local') });
-} catch (e) {
-  // dotenv is optional in environments where env vars are provided externally
-}
-const blobClient = require('@tigrisdata/storage');
+import './env.ts';
+import express from 'express';
+import session from 'express-session';
+import path from 'path';
+import * as blobClient from '@tigrisdata/storage';
+import { db, schema } from './db/index.ts';
+import { DrizzleStore } from './drizzle-session-store.ts';
+import { and, eq } from 'drizzle-orm';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -21,7 +18,14 @@ const BLOB_KEY_ACTIVITY = 'daybyday.json';
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(import.meta.dirname, 'public')));
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'default_secret',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: process.env.NODE_ENV === 'production' },
+  store: new DrizzleStore(),
+}));
 
 async function writeFile(filePath, data) {
   await blobClient.put(filePath, data);
@@ -63,6 +67,31 @@ app.post('/progress', async (req, res) => {
 
   res.json({ ok: true });
 });
+
+app.patch('/progress', async (req, res) => {
+  const {cambridgeVersion, passageName, testName, result} = req.body || {};
+  const userId = req.session.userId;
+
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+  
+  await db.insert(schema.passagesProgresses).values({
+    cambridgeVersion,
+    passageName,
+    testName,
+    userId,
+    result,
+  }).onConflictDoUpdate({
+    targetWhere: and(
+      eq(schema.passagesProgresses.userId, userId),
+      eq(schema.passagesProgresses.passageName, passageName),
+      eq(schema.passagesProgresses.testName, testName),
+      eq(schema.passagesProgresses.cambridgeVersion, cambridgeVersion)
+    ),
+    set: {
+      result,
+    }
+  });
+})
 
 // Save a feeling
 app.post('/feeling', async (req, res) => {

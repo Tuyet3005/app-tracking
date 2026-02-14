@@ -1,18 +1,28 @@
 {
   "name": "app-tracking",
+  "type": "module",
   "version": "1.0.0",
   "description": "Simple Node app that echoes input text",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js -i *.json"
+    "dev": "nodemon server.js -e js,ts -i *.json",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.0",
     "@tigrisdata/storage": "^2.12.1",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2"
+    "dotenv": "^16.6.1",
+    "drizzle-orm": "^0.45.1",
+    "express": "^4.18.2",
+    "express-session": "^1.19.0"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/express-session": "^1.18.2",
+    "drizzle-kit": "^0.31.9",
     "nodemon": "^3.1.11"
   }
 }

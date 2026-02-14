@@ -565,6 +565,21 @@
     const prevValue = input.getAttribute('data-prev-value') || '';
     const currentValue = (input.value || '').trim();
     
+    const passageName = input.getAttribute('data-passage');
+    const cambrigeVersion = input.getAttribute('data-row');
+    const testName = input.getAttribute('data-col');
+
+    fetch('/progress', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        passageName,
+        cambrigeVersion,
+        testName,
+        result: currentValue
+      })
+    });
+    
     onCellInput(e);
     
     // Mark today as active if user entered a valid value (not 0/0 or empty)
