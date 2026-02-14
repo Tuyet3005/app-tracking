@@ -5,9 +5,8 @@
   "description": "Simple Node app that echoes input text",
   "main": "server.js",
   "scripts": {
-    "build": "tsc && copyfiles ./public/* ./dist",
-    "start": "tsx server.js",
-    "dev": "tsx watch server.js",
+    "start": "tsx server.ts",
+    "dev": "tsx watch server.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio"
