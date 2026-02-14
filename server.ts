@@ -1,6 +1,5 @@
-// @ts-nocheck
 import './env.js';
-import express from 'express';
+import express, { type NextFunction, type Request, type Response } from 'express';
 import session from 'express-session';
 import path from 'path';
 import * as blobClient from '@tigrisdata/storage';
@@ -8,16 +7,11 @@ import { db, schema } from './db/index.js';
 import { DrizzleStore } from './drizzle-session-store.js';
 import { and, eq, like, desc, max } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
-import fs from 'fs';
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-const BLOB_KEY_PROGRESS = 'progress.json';
-const BLOB_KEY_FEELINGS = 'feelings.json';
 const BLOB_KEY_NOTES = 'notes.json';
-const BLOB_KEY_TODOS = 'todo.json';
-const BLOB_KEY_ACTIVITY = 'daybyday.json';
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -59,7 +53,7 @@ app.get('/api/cron', async (req, res) => {
       const lastBackup = await tx
         .select()
         .from(schema.databaseBackups)
-        .where(eq(schema.databaseBackups.timestamp, lastBackupTs[0].timestamp));
+        .where(eq(schema.databaseBackups.timestamp, lastBackupTs[0]?.timestamp ?? 0));
       const lastBackupTime = lastBackup[0]?.timestamp || 0;
 
       const now = Date.now();
@@ -84,7 +78,7 @@ app.get('/api/cron', async (req, res) => {
   if (needsBackup) {
     console.log(`Creating database backup: ${backupBlobKey}`);
     
-    const backupData = {};
+    const backupData: Record<string, any[]> = {};
 
     for (const [tableName, table] of Object.entries(schema.backupTables)) {
       console.log(`Backing up table: ${tableName}`);
@@ -114,7 +108,6 @@ app.get('/api/cron', async (req, res) => {
         .update(schema.databaseBackups)
         .set({ timestamp: Date.now() })
         .where(eq(schema.databaseBackups.blobKey, backupBlobKey));
-      backupBlobKey = null; // No need to upload since data is the same
       console.log('No changes since last backup, skipping upload');
     }
   }
@@ -123,22 +116,22 @@ app.get('/api/cron', async (req, res) => {
 });
 
 // Authentication middleware
-function requireAuth(req, res, next) {
+function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   next();
 }
 
-async function writeFile(filePath, data) {
+async function writeFile(filePath: string, data: string) {
   await blobClient.put(filePath, data);
 
   for (let i = 0; i < 5; i++) {
     try {
       const newData = await readFile(filePath);
       if (newData === data) return;
-    } catch (err) {
-      console.warn('Read after write failed, retrying...', err && err.message);
+    } catch (err: any) {
+      console.warn('Read after write failed, retrying...', err?.message);
     }
     await new Promise(res => setTimeout(res, 200));
   }
@@ -146,7 +139,7 @@ async function writeFile(filePath, data) {
   throw new Error('Failed to verify written data after multiple attempts');
 }
 
-async function readFile(filePath) {
+async function readFile(filePath: string) {
   const r = await blobClient.get(filePath, 'string');
   return r.data;
 }
@@ -199,8 +192,6 @@ app.post('/signup', async (req, res) => {
     });
     
     req.session.userId = username.trim();
-    req.session.username = username.trim();
-    req.session.displayName = trimmedDisplayName;
 
     res.json({ success: true, message: 'Account created successfully' });
   } catch (error) {
@@ -236,8 +227,6 @@ app.post('/login', async (req, res) => {
 
     // Set session
     req.session.userId = user.id;
-    req.session.username = user.username;
-    req.session.displayName = user.displayName;
 
     res.json({ success: true, username: user.username, displayName: user.displayName });
   } catch (error) {
@@ -256,39 +245,26 @@ app.post('/logout', (req, res) => {
   });
 });
 
-// Check authentication status
-app.get('/api/auth/status', (req, res) => {
-  if (req.session.userId) {
-    res.json({
-      authenticated: true,
-      username: req.session.username,
-      displayName: req.session.displayName
-    });
-  } else {
-    res.json({ authenticated: false });
-  }
-});
-
 // Get current user info
 app.get('/me', requireAuth, async (req, res) => {
   try {
     const user = await db
       .select()
       .from(schema.users)
-      .where(eq(schema.users.id, req.session.userId));
-    
+      .where(eq(schema.users.id, req.session.userId!));
+
     if (!user[0]) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: "User not found" });
     }
 
     res.json({
       id: user[0].id,
       username: user[0].username,
-      displayName: user[0].displayName
+      displayName: user[0].displayName,
     });
   } catch (error) {
-    console.error('Get user error:', error);
-    res.status(500).json({ error: 'Failed to fetch user' });
+    console.error("Get user error:", error);
+    res.status(500).json({ error: "Failed to fetch user" });
   }
 });
 
@@ -310,10 +286,7 @@ app.put('/me', requireAuth, async (req, res) => {
     await db
       .update(schema.users)
       .set({ displayName: trimmedDisplayName })
-      .where(eq(schema.users.id, req.session.userId));
-
-    // Update session
-    req.session.displayName = trimmedDisplayName;
+      .where(eq(schema.users.id, req.session.userId!));
 
     res.json({
       success: true,
@@ -330,13 +303,8 @@ app.post('/echo', (req, res) => {
   res.json({ text });
 });
 
-// Return saved progress JSON (if any)
-app.get('/progress/old', requireAuth, async (req, res) => {
-  return res.send(await readFile(BLOB_KEY_PROGRESS));
-});
-
 app.get('/progress', requireAuth, async (req, res) => {
-  const userId = req.session.userId;
+  const userId = req.session.userId!;
 
   const progresses = await db
     .select()
@@ -346,16 +314,16 @@ app.get('/progress', requireAuth, async (req, res) => {
   const progressResult = {
     passages: {},
     parts: {},
-    cellStates: {},
+    cellStates: {} as Record<string, boolean>,
   };
 
-  const set = (path, val, ptr = progressResult) => {
+  const set = (path: string[], val: any, ptr: Record<string, any> = progressResult) => {
     if (path.length === 1) {
-      ptr[path[0]] = val;
+      ptr[path[0]!] = val;
       return;
     }
-    if (ptr[path[0]] === undefined) ptr[path[0]] = {};
-    return set(path.slice(1), val, ptr[path[0]]);
+    if (ptr[path[0]!] === undefined) ptr[path[0]!] = {};
+    return set(path.slice(1), val, ptr[path[0]!]);
   };
 
   for (const p of progresses) {
@@ -374,18 +342,9 @@ app.get('/progress', requireAuth, async (req, res) => {
   return res.json(progressResult);
 });
 
-app.post('/progress', requireAuth, async (req, res) => {
-  const body = req.body || {};
-  const payload = JSON.stringify(body, null, 2);
-
-  await writeFile(BLOB_KEY_PROGRESS, payload);
-
-  res.json({ ok: true });
-});
-
 app.patch('/progress', requireAuth, async (req, res) => {
   const { cambridgeVersion, partName, testName, result, needReview } = req.body || {};
-  const userId = req.session.userId;
+  const userId = req.session.userId!;
   
   await db.transaction(async (tx) => {
     const updateResult = await tx.update(schema.camProgresses)
@@ -412,71 +371,6 @@ app.patch('/progress', requireAuth, async (req, res) => {
   res.json({ ok: true });
 })
 
-// Save a feeling
-app.post('/feeling', requireAuth, async (req, res) => {
-  const { date, name, feeling } = req.body;
-  if (!date) return res.status(400).json({ error: 'Date is required' });
-
-  // Read existing feelings
-  const feelings = JSON.parse(await readFile(BLOB_KEY_FEELINGS));
-
-  const timestamp = new Date().toISOString();
-  feelings.push({ date, name, feeling, timestamp });
-
-  const payload = JSON.stringify(feelings, null, 2);
-  await writeFile(BLOB_KEY_FEELINGS, payload);
-
-  res.json({ ok: true, entry: { date, name, feeling, timestamp } });
-});
-
-// Delete a feeling by timestamp
-app.delete('/feeling', requireAuth, async (req, res) => {
-  const ts = (req.body && req.body.timestamp) || req.query.timestamp;
-  if (!ts) return res.status(400).json({ error: 'timestamp is required' });
-
-  const feelings = JSON.parse(await readFile(BLOB_KEY_FEELINGS));
-  const idx = feelings.findIndex(f => f.timestamp === ts);
-  if (idx === -1) return res.status(404).json({ error: 'Not found' });
-
-  feelings.splice(idx, 1);
-  const payload = JSON.stringify(feelings, null, 2);
-  await writeFile(BLOB_KEY_FEELINGS, payload);
-
-  res.json({ ok: true });
-});
-
-// Update love status for a feeling
-app.post('/feeling/love', requireAuth, async (req, res) => {
-  const { timestamp, loved } = req.body;
-  if (!timestamp) return res.status(400).json({ error: 'timestamp is required' });
-
-  const feelings = JSON.parse(await readFile(BLOB_KEY_FEELINGS));
-  const entry = feelings.find(f => f.timestamp === timestamp);
-  if (!entry) return res.status(404).json({ error: 'Not found' });
-
-  entry.loved = loved;
-  const payload = JSON.stringify(feelings, null, 2);
-  await writeFile(BLOB_KEY_FEELINGS, payload);
-
-  res.json({ ok: true, loved: entry.loved });
-});
-
-app.post('/feeling/edit', requireAuth, async (req, res) => {
-  const { timestamp, feeling } = req.body;
-  if (!timestamp) return res.status(400).json({ error: 'timestamp is required' });
-  if (typeof feeling !== 'string') return res.status(400).json({ error: 'feeling is required' });
-
-  const feelings = JSON.parse(await readFile(BLOB_KEY_FEELINGS));
-  const entry = feelings.find(f => f.timestamp === timestamp);
-  if (!entry) return res.status(404).json({ error: 'Not found' });
-
-  entry.feeling = feeling;
-  const payload = JSON.stringify(feelings, null, 2);
-  await writeFile(BLOB_KEY_FEELINGS, payload);
-
-  res.json({ ok: true, entry });
-});
-
 app.post('/feelings', requireAuth, async (req, res) => {
   const { timestamp, name, feeling } = req.body;
   
@@ -487,7 +381,7 @@ app.post('/feelings', requireAuth, async (req, res) => {
   const date = new Date().toISOString().slice(0, 10);
 
   await db.insert(schema.feelingItems).values({
-    userId: req.session.userId,
+    userId: req.session.userId!,
     date,
     timestamp,
     feeling,
@@ -500,7 +394,7 @@ app.patch('/feelings/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   const { feeling, isLoved } = req.body;
 
-  const update = {};
+  const update: Partial<typeof schema.feelingItems.$inferInsert> = {};
   if (feeling !== undefined) update.feeling = feeling;
   if (isLoved !== undefined) update.isLoved = isLoved ? 1 : 0;
   
@@ -513,8 +407,8 @@ app.patch('/feelings/:id', requireAuth, async (req, res) => {
     .set(update)
     .where(
       and(
-        eq(schema.feelingItems.id, id),
-        eq(schema.feelingItems.userId, req.session.userId),
+        eq(schema.feelingItems.id, Number(id)),
+        eq(schema.feelingItems.userId, req.session.userId!),
       ),
     );
 
@@ -528,8 +422,8 @@ app.delete('/feelings/:id', requireAuth, async (req, res) => {
     .delete(schema.feelingItems)
     .where(
       and(
-        eq(schema.feelingItems.id, id),
-        eq(schema.feelingItems.userId, req.session.userId),
+        eq(schema.feelingItems.id, Number(id)),
+        eq(schema.feelingItems.userId, req.session.userId!),
       ),
     );
 
@@ -541,7 +435,7 @@ app.get('/feelings', requireAuth, async (req, res) => {
     await db
       .select()
       .from(schema.feelingItems)
-      .where(eq(schema.feelingItems.userId, req.session.userId))
+      .where(eq(schema.feelingItems.userId, req.session.userId!))
       .orderBy(desc(schema.feelingItems.timestamp)),
   );
 });
@@ -565,7 +459,7 @@ app.post('/notes', requireAuth, async (req, res) => {
 app.get('/notes', requireAuth, async (req, res) => {
   try {
     const data = await readFile(BLOB_KEY_NOTES);
-    return res.json(JSON.parse(data));
+    return res.json(JSON.parse(data ?? '{}'));
   } catch (err) {
     // Return empty notes if file doesn't exist yet
     return res.json({ notes: '', lastModified: null });
@@ -577,7 +471,7 @@ app.post('/todos', requireAuth, async (req, res) => {
   if (!text) return res.status(400).json({ error: 'Text is required' });
 
   await db.insert(schema.todoItems).values({
-    userId: req.session.userId,
+    userId: req.session.userId!,
     text,
     completed: completed ? 1 : 0,
     createdAt: new Date().toISOString(),
@@ -593,15 +487,15 @@ app.patch('/todos/:id', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'Text or completed status is required' });
   }
 
-  const updateData = {};
+  const updateData: Partial<typeof schema.todoItems.$inferInsert> = {};
   if (text) updateData.text = text;
   if (completed !== undefined) updateData.completed = completed ? 1 : 0;
 
   const result = await db.update(schema.todoItems)
     .set(updateData)
     .where(and(
-      eq(schema.todoItems.id, id),
-      eq(schema.todoItems.userId, req.session.userId)
+      eq(schema.todoItems.id, Number(id)),
+      eq(schema.todoItems.userId, req.session.userId!)
     ));
 
   res.json({ ok: true, updated: result.rowsAffected });
@@ -611,8 +505,8 @@ app.delete('/todos/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   await db.delete(schema.todoItems)
     .where(and(
-      eq(schema.todoItems.id, id),
-      eq(schema.todoItems.userId, req.session.userId)
+      eq(schema.todoItems.id, Number(id)),
+      eq(schema.todoItems.userId, req.session.userId!)
     ));
   res.json({ ok: true });
 });
@@ -622,27 +516,9 @@ app.get('/todos', requireAuth, async (req, res) => {
     todos: await db
       .select()
       .from(schema.todoItems)
-      .where(eq(schema.todoItems.userId, req.session.userId))
+      .where(eq(schema.todoItems.userId, req.session.userId!))
       .orderBy(desc(schema.todoItems.createdAt)),
   })
-});
-
-// Save activity data
-app.post('/activity', requireAuth, async (req, res) => {
-  try {
-    const { activeDays } = req.body;
-    const payload = {
-      activeDays: activeDays || [],
-      lastModified: new Date().toISOString()
-    };
-    console.log('Received activity data to save:', payload);
-    await writeFile(BLOB_KEY_ACTIVITY, JSON.stringify(payload, null, 2));
-    console.log('Activity data saved successfully');
-    res.json({ success: true });
-  } catch (err) {
-    console.error('Failed to save activity data:', err);
-    res.status(500).json({ error: 'Failed to save activity data' });
-  }
 });
 
 app.patch('/activity', requireAuth, async (req, res) => {
@@ -650,7 +526,7 @@ app.patch('/activity', requireAuth, async (req, res) => {
   if (!date) return res.status(400).json({ error: 'activeDate is required' });
 
   await db.insert(schema.userActiveLog).values({
-    userId: req.session.userId,
+    userId: req.session.userId!,
     date: date,
   }).onConflictDoNothing();
   res.json({ success: true });
@@ -661,7 +537,7 @@ app.delete('/activity', requireAuth, async (req, res) => {
   if (!date) return res.status(400).json({ error: 'activeDate is required' });
 
   await db.delete(schema.userActiveLog).where(and(
-    eq(schema.userActiveLog.userId, req.session.userId),
+    eq(schema.userActiveLog.userId, req.session.userId!),
     eq(schema.userActiveLog.date, date)
   ));
   res.json({ success: true });
@@ -680,7 +556,7 @@ app.get('/activity', requireAuth, async (req, res) => {
     .from(schema.userActiveLog)
     .where(
       and(
-        eq(schema.userActiveLog.userId, req.session.userId),
+        eq(schema.userActiveLog.userId, req.session.userId!),
         like(schema.userActiveLog.date, `${month}-%`),
       ),
     )
