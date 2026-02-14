@@ -37,24 +37,11 @@ app.use(session({
   store: new DrizzleStore(),
 }));
 
-const PUBLIC_FILES = fs.readdirSync(path.join(process.cwd(), 'public'));
-app.use((req, res, next) => {
-  const filePath = req.path === '/' ? '/index.html' : req.path.substring(1);
-  if (PUBLIC_FILES.includes(filePath)) {
-    return res.sendFile(path.join(process.cwd(), 'public', filePath));
-  }
-
-  next();
-});
-
 app.use(express.static(path.join(import.meta.dirname, 'public')));
 
 // Authentication middleware
 function requireAuth(req, res, next) {
   if (!req.session.userId) {
-    if (req.path === '/' || req.path.endsWith('.html')) {
-      return res.redirect('/login.html');
-    }
     return res.status(401).json({ error: 'Unauthorized' });
   }
   next();
