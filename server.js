@@ -1,10 +1,10 @@
-import './env.ts';
+import './env';
 import express from 'express';
 import session from 'express-session';
 import path from 'path';
 import * as blobClient from '@tigrisdata/storage';
-import { db, schema } from './db/index.ts';
-import { DrizzleStore } from './drizzle-session-store.ts';
+import { db, schema } from './db/index';
+import { DrizzleStore } from './drizzle-session-store';
 import { and, eq } from 'drizzle-orm';
 
 const app = express();
