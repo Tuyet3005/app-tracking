@@ -1,6 +1,6 @@
 import { count, eq } from "drizzle-orm";
 import { type SessionData, Store } from "express-session";
-import { db, schema } from "./db/index.ts";
+import { db, schema } from "./db";
 
 type Callback = (_err?: unknown, _data?: any) => any;
 function optionalCb(err: unknown, data: unknown, cb?: Callback) {
@@ -40,7 +40,7 @@ export class DrizzleStore extends Store {
 
   // This optional method is used to get all sessions in the store as an array.
   // The callback should be called as callback(error, sessions).
-  async all(cb?: Callback) {
+  override async all(cb?: Callback) {
     try {
       const sessions = await db.select().from(schema.sessions);
 
@@ -63,7 +63,7 @@ export class DrizzleStore extends Store {
 
   // This optional method is used to delete all sessions from the store.
   // The callback should be called as callback(error) once the store is cleared.
-  async clear(cb?: Callback) {
+  override async clear(cb?: Callback) {
     try {
       await db.delete(schema.sessions);
       return optionalCb(null, null, cb);
@@ -74,7 +74,7 @@ export class DrizzleStore extends Store {
 
   // This optional method is used to get the count of all sessions in the store.
   // The callback should be called as callback(error, len).
-  async length(cb?: Callback) {
+  override async length(cb?: Callback) {
     try {
       const countResult = await db
         .select({ count: count() })
@@ -148,7 +148,7 @@ export class DrizzleStore extends Store {
   // This is primarily used when the store will automatically delete idle sessions
   // and this method is used to signal to the store the given session is active,
   // potentially resetting the idle timer.
-  async touch(sid: string, sess: SessionData, cb?: Callback) {
+  override async touch(sid: string, sess: SessionData, cb?: Callback) {
     const newCookies: SessionData['cookie'] = { ...sess.cookie, expires: null };
     const { expiresAt } = this.getExpiresAt({
       ...sess,
