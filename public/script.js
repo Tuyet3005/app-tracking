@@ -51,7 +51,7 @@
         markSaved();
       } else {
         console.warn('Failed to load user display name');
-        markError();
+        window.location.href = '/login.html';
       }
     } catch (error) {
       console.error('Error loading user display name:', error);
