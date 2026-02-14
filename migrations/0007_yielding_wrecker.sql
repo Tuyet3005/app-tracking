@@ -1,0 +1,1 @@
+ALTER TABLE `databaseBackups` ADD `hash` text;

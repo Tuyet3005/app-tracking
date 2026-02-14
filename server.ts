@@ -49,29 +49,40 @@ app.get('/', (req, res) => {
 
 const BACKUP_INTERVAL = 1000 * 60 * 5; // 5 minutes
 app.use(async (req, res, next) => {
-  let backupId = null;
-  
-  await db.transaction(async (tx) => {
-    const lastBackup = await tx
-      .select({
-        timestamp: max(schema.databaseBackups.timestamp),
-      })
-      .from(schema.databaseBackups);
-    const lastBackupTime = lastBackup[0]?.timestamp || 0;
-    const now = Date.now();
-    
-    if (now - lastBackupTime > BACKUP_INTERVAL) {
-      const backupName = `backups/backup-${new Date(now).toISOString()}.json`;
-      await tx.insert(schema.databaseBackups).values({
-        timestamp: now,
-        blobKey: backupName,
-      });
-      backupId = backupName;
-    }
-  });
+  const { needsBackup, backupBlobKey, lastBackupHash, lastBackupBlobKey } =
+    await db.transaction(async (tx) => {
+      const lastBackupTs = await tx
+        .select({
+          timestamp: max(schema.databaseBackups.timestamp),
+        })
+        .from(schema.databaseBackups);
+      const lastBackup = await tx
+        .select()
+        .from(schema.databaseBackups)
+        .where(eq(schema.databaseBackups.timestamp, lastBackupTs[0].timestamp));
+      const lastBackupTime = lastBackup[0]?.timestamp || 0;
 
-  if (backupId) {
-    console.log(`Creating database backup: ${backupId}`);
+      const now = Date.now();
+      const backupBlobKey = `backups/backup-${new Date(now).toISOString()}.json`;
+      const needsBackup = now - lastBackupTime > BACKUP_INTERVAL;
+
+      if (needsBackup) {
+        await tx.insert(schema.databaseBackups).values({
+          timestamp: now,
+          blobKey: backupBlobKey,
+        });
+      }
+
+      return {
+        lastBackupHash: lastBackup[0]?.hash || null,
+        lastBackupBlobKey: lastBackup[0]?.blobKey || null,
+        backupBlobKey,
+        needsBackup,
+      };
+    });
+
+  if (needsBackup) {
+    console.log(`Creating database backup: ${backupBlobKey}`);
     
     const backupData = {};
 
@@ -86,9 +97,30 @@ app.use(async (req, res, next) => {
       backupData[tableName] = data;
     }
 
-    console.log('Uploading backup to blob storage...');
-    await blobClient.put(backupId, JSON.stringify(backupData));
-    console.log(`Database backed up to ${backupId}`);
+    const data = JSON.stringify(backupData, null, 2);
+    const dataHash = bcrypt.hashSync(data, 10);
+    if (dataHash !== lastBackupHash) {
+      console.log('Uploading backup to blob storage...');
+      // Upload backup to blob storage
+      await blobClient.put(backupBlobKey, data);
+      // Update backup entry with hash
+      await db.update(schema.databaseBackups)
+        .set({ hash: dataHash })
+        .where(eq(schema.databaseBackups.blobKey, backupBlobKey));
+      console.log(`Database backed up to ${backupBlobKey}`);
+    } else {
+      // Delete current back entry
+      await db
+        .delete(schema.databaseBackups)
+        .where(eq(schema.databaseBackups.blobKey, backupBlobKey));
+      // Touch the existing backup to update timestamp
+      await db
+        .update(schema.databaseBackups)
+        .set({ timestamp: Date.now() })
+        .where(eq(schema.databaseBackups.blobKey, backupBlobKey));
+      backupBlobKey = null; // No need to upload since data is the same
+      console.log('No changes since last backup, skipping upload');
+    }
   }
   
   next();
@@ -584,6 +616,17 @@ app.get('/activity', requireAuth, async (req, res) => {
     .then((rows) => rows.map((r) => r.date));
 
   return res.json({ activeDays });
+});
+
+app.get("/backup", async (req, res) => {
+  return res.json(
+    await db
+      .select({
+        lastBackup: max(schema.databaseBackups.timestamp),
+      })
+      .from(schema.databaseBackups)
+      .get(),
+  );
 });
 
 if (process.env.NODE_ENV !== 'production') {

@@ -45,4 +45,7 @@ export const databaseBackups = sqliteTable("databaseBackups", {
   id: int().primaryKey(),
   timestamp: int().notNull(),
   blobKey: text().notNull(),
-});
+  hash: text(),
+}, (t) => [
+  uniqueIndex("uniqueBlobKey").on(t.blobKey),
+]);

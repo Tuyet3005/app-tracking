@@ -1,5 +1,12 @@
 // old echo form removed; no-op
 
+// Constants for save statuses
+const SAVING_STATUSES = {
+  SAVING: 'saving',
+  SAVED: 'saved',
+  ERROR: 'error'
+};
+
 // Logout functionality
 (() => {
   const logoutBtn = document.getElementById('logoutBtn');
@@ -347,9 +354,13 @@
   function setProgressStatus(state, text) {
     const el = document.getElementById('progressSaveStatus');
     if (!el) return;
-    el.classList.remove('saved', 'saving', 'error');
+    el.classList.remove(SAVING_STATUSES.SAVED, SAVING_STATUSES.SAVING, SAVING_STATUSES.ERROR);
     el.classList.add(state);
     if (typeof text === 'string') el.textContent = text;
+    // Refresh backup status when save completes (not while saving)
+    if (state !== SAVING_STATUSES.SAVING && typeof window.refreshBackupStatus === 'function') {
+      window.refreshBackupStatus();
+    }
   }
   function scheduleSave() {
     if (!isLoaded) return; // do not schedule saves before initial load
@@ -366,10 +377,10 @@
     const payloadStr = JSON.stringify(payload);
     // skip sending if nothing changed since last successful save
     if (lastSavedState === payloadStr) {
-      setProgressStatus('saved', 'Saved');
+      setProgressStatus(SAVING_STATUSES.SAVED, 'Saved');
       return;
     }
-    setProgressStatus('saving', 'Saving…');
+    setProgressStatus(SAVING_STATUSES.SAVING, 'Saving…');
     try {
       const res = await fetch('/progress', {
         method: 'POST',
@@ -378,14 +389,14 @@
       });
       if (res && res.ok) {
         lastSavedState = payloadStr;
-        setProgressStatus('saved', 'Saved');
+        setProgressStatus(SAVING_STATUSES.SAVED, 'Saved');
       } else {
         // server returned error - do not update lastSavedState
-        setProgressStatus('error', 'Save failed');
+        setProgressStatus(SAVING_STATUSES.ERROR, 'Save failed');
         console.warn('Save returned non-ok response', res && res.status);
       }
     } catch (e) {
-      setProgressStatus('error', 'Save failed');
+      setProgressStatus(SAVING_STATUSES.ERROR, 'Save failed');
       console.warn('Failed to save progress', e);
     }
   }
@@ -641,7 +652,7 @@
     const cambridgeVersion = input.getAttribute('data-row');
     const testName = input.getAttribute('data-col');
 
-    setProgressStatus('saving', 'Saving…');
+    setProgressStatus(SAVING_STATUSES.SAVING, 'Saving…');
     fetch('/progress', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -652,8 +663,8 @@
         result: currentValue
       })
     })
-      .then(() => setProgressStatus('saved', 'Saved'))
-      .catch(() => setProgressStatus('error', 'Save failed'));
+      .then(() => setProgressStatus(SAVING_STATUSES.SAVED, 'Saved'))
+      .catch(() => setProgressStatus(SAVING_STATUSES.ERROR, 'Save failed'));
     
     onCellInput(e);
     
@@ -688,7 +699,7 @@
     const cambridgeVersion = input.getAttribute('data-row');
     const testName = input.getAttribute('data-col');
 
-    setProgressStatus('saving', 'Saving…');
+    setProgressStatus(SAVING_STATUSES.SAVING, 'Saving…');
     fetch('/progress', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -700,8 +711,8 @@
         needReview: isMarked
       })
     })
-      .then(() => setProgressStatus('saved', 'Saved'))
-      .catch(() => setProgressStatus('error', 'Save failed'));
+      .then(() => setProgressStatus(SAVING_STATUSES.SAVED, 'Saved'))
+      .catch(() => setProgressStatus(SAVING_STATUSES.ERROR, 'Save failed'));
     
     if (isMarked) {
       td.classList.add('marked');
@@ -783,7 +794,7 @@
       lastSavedState = null;
     }
     // reflect saved status in UI and update totals
-    try { setProgressStatus('saved', 'Saved'); } catch (e) {}
+    try { setProgressStatus(SAVING_STATUSES.SAVED, 'Saved'); } catch (e) {}
     try { updateTotals(); } catch (e) {}
   }
 
@@ -879,9 +890,13 @@
   function setFeelingStatus(state, text) {
     const el = document.getElementById('feelingSaveStatus');
     if (!el) return;
-    el.classList.remove('saved', 'saving', 'error');
+    el.classList.remove(SAVING_STATUSES.SAVED, SAVING_STATUSES.SAVING, SAVING_STATUSES.ERROR);
     if (state) el.classList.add(state);
     if (typeof text === 'string') el.textContent = text;
+    // Refresh backup status when save completes (not while saving)
+    if (state !== SAVING_STATUSES.SAVING && typeof window.refreshBackupStatus === 'function') {
+      window.refreshBackupStatus();
+    }
   }
 
   // Lưu feeling vào localStorage khi nhập liệu
@@ -911,7 +926,7 @@
     };
 
     try {
-      setFeelingStatus('saving', 'Saving…');
+      setFeelingStatus(SAVING_STATUSES.SAVING, 'Saving…');
       const res = await fetch('/feeling', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -929,11 +944,11 @@
         // Nếu có các trường khác trong cloud, clear tại đây nếu cần
         feelingInput.blur();
       } else {
-        setFeelingStatus('error', 'Save failed');
+        setFeelingStatus(SAVING_STATUSES.ERROR, 'Save failed');
         console.warn('Failed to save feeling', await res.text());
       }
     } catch (err) {
-      setFeelingStatus('error', 'Save failed');
+      setFeelingStatus(SAVING_STATUSES.ERROR, 'Save failed');
       console.warn('Failed to save feeling', err);
     }
   });
@@ -1291,14 +1306,18 @@
   function setNotesStatus(state, text) {
     const el = document.getElementById('notesSaveStatus');
     if (!el) return;
-    el.classList.remove('saved', 'saving', 'error');
+    el.classList.remove(SAVING_STATUSES.SAVED, SAVING_STATUSES.SAVING, SAVING_STATUSES.ERROR);
     if (state) el.classList.add(state);
     if (typeof text === 'string') el.textContent = text;
+    // Refresh backup status when save completes (not while saving)
+    if (state !== SAVING_STATUSES.SAVING && typeof window.refreshBackupStatus === 'function') {
+      window.refreshBackupStatus();
+    }
   }
 
   // Auto-save notes when user stops typing
   notesInput.addEventListener('input', () => {
-    setNotesStatus('saving', 'Saving…');
+    setNotesStatus(SAVING_STATUSES.SAVING, 'Saving…');
     if (notesTimer) clearTimeout(notesTimer);
     notesTimer = setTimeout(async () => {
       await saveNotes();
@@ -1314,14 +1333,14 @@
         body: JSON.stringify({ notes: notesText })
       });
       if (res.ok) {
-        setNotesStatus('saved', 'Saved ✓');
+        setNotesStatus(SAVING_STATUSES.SAVED, 'Saved ✓');
         setTimeout(() => setNotesStatus('', ''), 2000);
       } else {
-        setNotesStatus('error', 'Save failed');
+        setNotesStatus(SAVING_STATUSES.ERROR, 'Save failed');
         console.warn('Failed to save notes', await res.text());
       }
     } catch (err) {
-      setNotesStatus('error', 'Save failed');
+      setNotesStatus(SAVING_STATUSES.ERROR, 'Save failed');
       console.warn('Failed to save notes', err);
     }
   }
@@ -1357,9 +1376,13 @@
   function setTodoStatus(state, text) {
     const el = document.getElementById('todoSaveStatus');
     if (!el) return;
-    el.classList.remove('saved', 'saving', 'error');
+    el.classList.remove(SAVING_STATUSES.SAVED, SAVING_STATUSES.SAVING, SAVING_STATUSES.ERROR);
     if (state) el.classList.add(state);
     if (typeof text === 'string') el.textContent = text;
+    // Refresh backup status when save completes (not while saving)
+    if (state !== SAVING_STATUSES.SAVING && typeof window.refreshBackupStatus === 'function') {
+      window.refreshBackupStatus();
+    }
   }
 
   function renderTodos() {
@@ -1427,7 +1450,7 @@
 
   async function saveTodos() {
     try {
-      setTodoStatus('saving', 'Saving…');
+      setTodoStatus(SAVING_STATUSES.SAVING, 'Saving…');
       console.log('Saving todos:', todos);
       const res = await fetch('/todos', {
         method: 'POST',
@@ -1437,14 +1460,14 @@
       if (res.ok) {
         const result = await res.json();
         console.log('Save result:', result);
-        setTodoStatus('saved', 'Saved ✓');
+        setTodoStatus(SAVING_STATUSES.SAVED, 'Saved ✓');
         setTimeout(() => setTodoStatus('', ''), 2000);
       } else {
-        setTodoStatus('error', 'Save failed');
+        setTodoStatus(SAVING_STATUSES.ERROR, 'Save failed');
         console.warn('Failed to save todos', await res.text());
       }
     } catch (err) {
-      setTodoStatus('error', 'Save failed');
+      setTodoStatus(SAVING_STATUSES.ERROR, 'Save failed');
       console.warn('Failed to save todos', err);
     }
   }
@@ -1799,4 +1822,71 @@
 
   // Initial render - load current month
   loadActivityData(getCurrentMonthKey());
+})();
+
+// Backup Status Display - show last backup time
+(() => {
+  const backupStatus = document.getElementById('backupStatus');
+  if (!backupStatus) return;
+
+  async function loadBackupStatus() {
+    try {
+      const res = await fetch('/backup');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.lastBackup) {
+          const backupDate = new Date(data.lastBackup);
+          const now = new Date();
+          const diffMs = now - backupDate;
+          const diffMins = Math.floor(diffMs / 60000);
+          const diffHours = Math.floor(diffMs / 3600000);
+          const diffDays = Math.floor(diffMs / 86400000);
+
+          let timeAgo = '';
+          if (diffMins < 1) {
+            timeAgo = 'just now';
+          } else if (diffMins < 60) {
+            timeAgo = `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+          } else if (diffHours < 24) {
+            timeAgo = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+          } else {
+            timeAgo = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+          }
+
+          // Format the exact date for tooltip
+          const formattedDate = backupDate.toLocaleString('en-GB', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          });
+
+          backupStatus.textContent = `💾 Last backup: ${timeAgo}`;
+          backupStatus.title = `Backup at ${formattedDate}`;
+          backupStatus.style.color = '#10b981';
+        } else {
+          backupStatus.textContent = '💾 No backup yet';
+          backupStatus.style.color = '#9ca3af';
+        }
+      } else {
+        backupStatus.textContent = '💾 Backup info unavailable';
+        backupStatus.style.color = '#ef4444';
+      }
+    } catch (e) {
+      console.warn('Failed to load backup status', e);
+      backupStatus.textContent = '💾 Backup check failed';
+      backupStatus.style.color = '#ef4444';
+    }
+  }
+
+  // Expose loadBackupStatus globally so it can be called when saves complete
+  window.refreshBackupStatus = loadBackupStatus;
+
+  // Load backup status on page load
+  loadBackupStatus();
+
+  // Refresh backup status every 1 minute
+  setInterval(loadBackupStatus, 60000);
 })();

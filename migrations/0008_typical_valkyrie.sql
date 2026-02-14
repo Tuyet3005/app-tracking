@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `uniqueBlobKey` ON `databaseBackups` (`blobKey`);
