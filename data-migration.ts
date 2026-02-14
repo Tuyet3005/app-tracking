@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 
 const MIGRATE_PROGRESS = false;
 const MIGRATE_ACTIVITIES = false;
-const MIGRATE_TODOS = true;
+const MIGRATE_TODOS = false;
 
 (async function () {
   const user = await db
