@@ -684,13 +684,32 @@
     const btn = e.target;
     const isMarked = btn.classList.toggle('marked');
     
+    const partName = input.getAttribute('data-passage') || input.getAttribute('data-part');
+    const cambridgeVersion = input.getAttribute('data-row');
+    const testName = input.getAttribute('data-col');
+
+    setProgressStatus('saving', 'Saving…');
+    fetch('/progress', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        partName,
+        cambridgeVersion,
+        testName,
+        result: input.value.trim(),
+        needReview: isMarked
+      })
+    })
+      .then(() => setProgressStatus('saved', 'Saved'))
+      .catch(() => setProgressStatus('error', 'Save failed'));
+    
     if (isMarked) {
       td.classList.add('marked');
     } else {
       td.classList.remove('marked');
     }
     
-    scheduleSave();
+    // scheduleSave();
     // update totals after cell changes
     try { updateTotals(); } catch (err) {}
   }
