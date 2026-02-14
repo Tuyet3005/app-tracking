@@ -180,6 +180,62 @@ app.get('/api/auth/status', (req, res) => {
   }
 });
 
+// Get current user info
+app.get('/me', requireAuth, async (req, res) => {
+  try {
+    const user = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.id, req.session.userId));
+    
+    if (!user[0]) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({
+      id: user[0].id,
+      username: user[0].username,
+      displayName: user[0].displayName
+    });
+  } catch (error) {
+    console.error('Get user error:', error);
+    res.status(500).json({ error: 'Failed to fetch user' });
+  }
+});
+
+// Update current user info
+app.put('/me', requireAuth, async (req, res) => {
+  try {
+    const { displayName } = req.body;
+
+    if (!displayName) {
+      return res.status(400).json({ error: 'Display name is required' });
+    }
+
+    const trimmedDisplayName = displayName.trim();
+    if (trimmedDisplayName.length < 2 || trimmedDisplayName.length > 50) {
+      return res.status(400).json({ error: 'Display name must be between 2 and 50 characters' });
+    }
+
+    // Update in database
+    await db
+      .update(schema.users)
+      .set({ displayName: trimmedDisplayName })
+      .where(eq(schema.users.id, req.session.userId));
+
+    // Update session
+    req.session.displayName = trimmedDisplayName;
+
+    res.json({
+      success: true,
+      displayName: trimmedDisplayName
+    });
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
 app.get('/', requireAuth, (req, res) => {
   res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
 });

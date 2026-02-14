@@ -39,22 +39,66 @@
   let nameTimer = null;
   function markSaved() { if (saveLabel) saveLabel.textContent = 'Saved'; }
   function markSaving() { if (saveLabel) saveLabel.textContent = 'Saving…'; }
+  function markError() { if (saveLabel) saveLabel.textContent = 'Error'; }
+
+  // Load user display name on page load
+  async function loadUserDisplayName() {
+    try {
+      const response = await fetch('/me');
+      if (response.ok) {
+        const user = await response.json();
+        nameInput.value = user.displayName || '';
+        markSaved();
+      } else {
+        console.warn('Failed to load user display name');
+        markError();
+      }
+    } catch (error) {
+      console.error('Error loading user display name:', error);
+      markError();
+    }
+  }
+
+  // Save display name to server
+  async function saveDisplayName() {
+    const displayName = nameInput.value.trim();
+    if (!displayName) {
+      markError();
+      return;
+    }
+
+    try {
+      const response = await fetch('/me', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ displayName })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        markSaved();
+      } else {
+        console.error('Failed to update display name');
+        markError();
+      }
+    } catch (error) {
+      console.error('Error updating display name:', error);
+      markError();
+    }
+  }
 
   nameInput.addEventListener('input', () => {
     markSaving();
     if (nameTimer) clearTimeout(nameTimer);
     nameTimer = setTimeout(() => {
-      // schedule overall save with table state
-      if (typeof scheduleSave === 'function') scheduleSave();
-      markSaved();
+      saveDisplayName();
     }, 600);
   });
 
-  // expose helper to populate name during load
-  window.__setLoadedUserName = (val) => {
-    nameInput.value = val || '';
-    markSaved();
-  };
+  // Load display name when page loads
+  loadUserDisplayName();
 })();
 
 // Practice Progress tables (3 passages side-by-side)
@@ -679,10 +723,6 @@
     const map = (obj && obj.passages) || {};
     const partsMap = (obj && obj.parts) || {};
     const cellStates = (obj && obj.cellStates) || {};
-    // load username if present
-    if (obj && obj.username && typeof window.__setLoadedUserName === 'function') {
-      window.__setLoadedUserName(obj.username);
-    }
     document.querySelectorAll('input.practice-input').forEach(input => {
       const part = input.getAttribute('data-part');
       const p = input.getAttribute('data-passage');
