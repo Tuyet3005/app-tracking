@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `uniqueProgress` ON `camProgresses` (`userId`,`cambridgeVersion`,`partName`,`testName`);

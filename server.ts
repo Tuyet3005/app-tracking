@@ -264,24 +264,32 @@ app.post('/progress', requireAuth, async (req, res) => {
 });
 
 app.patch('/progress', requireAuth, async (req, res) => {
-  const { cambridgeVersion, partName, testName, result } = req.body || {};
+  const { cambridgeVersion, partName, testName, result, needReview } = req.body || {};
   const userId = req.session.userId;
+  
+  await db.transaction(async (tx) => {
+    const existing = await tx.select()
+      .from(schema.camProgresses)
+      .where(and(
+        eq(schema.camProgresses.userId, userId),
+        eq(schema.camProgresses.partName, partName),
+        eq(schema.camProgresses.testName, testName),
+        eq(schema.camProgresses.cambridgeVersion, cambridgeVersion)
+      ));
 
-  await db.insert(schema.camProgresses).values({
-    cambridgeVersion,
-    partName,
-    testName,
-    userId,
-    result,
-  }).onConflictDoUpdate({
-    targetWhere: and(
-      eq(schema.camProgresses.userId, userId),
-      eq(schema.camProgresses.partName, partName),
-      eq(schema.camProgresses.testName, testName),
-      eq(schema.camProgresses.cambridgeVersion, cambridgeVersion)
-    ),
-    set: {
-      result,
+    if (existing.length > 0) {
+      await tx.update(schema.camProgresses)
+        .set({ result, needReview })
+        .where(eq(schema.camProgresses.id, existing[0].id));
+    } else {
+      await tx.insert(schema.camProgresses).values({
+        cambridgeVersion,
+        partName,
+        testName,
+        userId,
+        result,
+        needReview
+      });
     }
   });
 
