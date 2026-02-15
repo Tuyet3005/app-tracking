@@ -296,86 +296,6 @@ const SAVING_STATUS_TEXT = {
     return wrapper;
   }
 
-  // Debounced save: collect full state and POST to server
-  let saveTimer = null;
-  let lastSavedState = null;
-  let isLoaded = false; // becomes true after initial loadProgress() completes
-  // UI helper for progress save status
-  function scheduleSave() {
-    if (!isLoaded) return; // do not schedule saves before initial load
-    if (saveTimer) clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => saveNow(), 200);
-  }
-  // expose scheduleSave/saveNow to global so other components (username box) can trigger saves
-  window.scheduleSave = scheduleSave;
-  window.saveNow = saveNow;
-  async function saveNow() {
-    if (!isLoaded) return; // don't save until initial load completes
-    if (saveTimer) {
-      clearTimeout(saveTimer);
-      saveTimer = null;
-    }
-    const payload = collectState();
-    const payloadStr = JSON.stringify(payload);
-    // skip sending if nothing changed since last successful save
-    if (lastSavedState === payloadStr) {
-      setProgressStatus(SAVING_STATUSES.SAVED, "Saved");
-      return;
-    }
-    setProgressStatus(SAVING_STATUSES.SAVING, "Saving…");
-    try {
-      const res = await fetch("/progress", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: payloadStr,
-      });
-      if (res && res.ok) {
-        lastSavedState = payloadStr;
-        setProgressStatus(SAVING_STATUSES.SAVED, "Saved");
-      } else {
-        // server returned error - do not update lastSavedState
-        setProgressStatus(SAVING_STATUSES.ERROR, "Save failed");
-        console.warn("Save returned non-ok response", res && res.status);
-      }
-    } catch (e) {
-      setProgressStatus(SAVING_STATUSES.ERROR, "Save failed");
-      console.warn("Failed to save progress", e);
-    }
-  }
-
-  function collectState() {
-    const data = { passages: {}, parts: {}, cellStates: {} };
-    document.querySelectorAll("input.practice-input").forEach((input) => {
-      const part = input.getAttribute("data-part");
-      const p = input.getAttribute("data-passage");
-      const r = input.getAttribute("data-row");
-      const c = input.getAttribute("data-col");
-      const v = (input.value || "").trim();
-
-      if (part) {
-        data.parts[part] = data.parts[part] || {};
-        data.parts[part][r] = data.parts[part][r] || {};
-        data.parts[part][r][c] = v;
-      } else {
-        const pass = p || "Passage 1";
-        data.passages[pass] = data.passages[pass] || {};
-        data.passages[pass][r] = data.passages[pass][r] || {};
-        data.passages[pass][r][c] = v;
-      }
-
-      // collect cell button states (marked status)
-      const statusBtn = input.parentElement.querySelector(".cell-status-btn");
-      if (statusBtn && v) {
-        const key = `${p || part || "default"}_${r}_${c}`;
-        data.cellStates[key] = statusBtn.classList.contains("marked");
-      }
-    });
-    // include username if present
-    const unameEl = document.getElementById("usernameBox");
-    if (unameEl) data.username = (unameEl.value || "").trim();
-    return data;
-  }
-
   // Update per-table and overall totals for reading/listening
   function updateTotals() {
     const containers = document.querySelectorAll(".practice-wrapper");
@@ -547,8 +467,6 @@ const SAVING_STATUS_TEXT = {
 
     // Store current value for next comparison
     input.setAttribute("data-prev-value", currentValue);
-
-    // saveNow();
   }
 
   function onStatusBtnClick(e, input, td) {
@@ -583,7 +501,6 @@ const SAVING_STATUS_TEXT = {
       td.classList.remove("marked");
     }
 
-    // scheduleSave();
     // update totals after cell changes
     try {
       updateTotals();
@@ -656,12 +573,6 @@ const SAVING_STATUS_TEXT = {
         }
       }
     });
-    // set lastSavedState to loaded server state to avoid immediately re-saving
-    try {
-      lastSavedState = JSON.stringify(obj || {});
-    } catch (e) {
-      lastSavedState = null;
-    }
     // reflect saved status in UI and update totals
     try {
       setProgressStatus(SAVING_STATUSES.SAVED, "Saved");
@@ -685,40 +596,9 @@ const SAVING_STATUS_TEXT = {
     } catch (e) {
       console.warn("Failed to load progress", e);
     }
-    // mark loaded so autosaves can run
-    isLoaded = true;
   }
 
   loadProgress();
-
-  // Periodically poll for server-side changes and apply them when safe
-  const PROGRESS_POLL_INTERVAL = 30 * 1000; // 30s
-  async function pollProgressOnce() {
-    try {
-      const res = await fetch("/progress");
-      if (!res.ok) return;
-      const obj = await res.json();
-      const serverStr = JSON.stringify(obj || {});
-      // if server state equals our last saved state, nothing to do
-      if (lastSavedState === serverStr) return;
-      // if user has local unsaved changes (current != lastSavedState), avoid clobbering
-      const current = JSON.stringify(collectState());
-      if (current !== lastSavedState) return;
-      // safe to apply server state
-      applyProgress(obj);
-    } catch (e) {
-      // silently ignore polling errors
-    }
-  }
-
-  function startProgressPolling() {
-    setInterval(() => {
-      if (!isLoaded) return;
-      pollProgressOnce();
-    }, PROGRESS_POLL_INTERVAL);
-  }
-
-  startProgressPolling();
 })();
 
 // Feelings Cloud Widget - handle daily feelings
