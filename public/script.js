@@ -1,4 +1,4 @@
-import { addBlurOrEnterListener } from "./utils.js";
+import { addBlurOrEnterListener, html } from "./utils.js";
 
 // Constants for save statuses
 const SAVING_STATUSES = {
@@ -152,130 +152,79 @@ const SAVING_STATUS_TEXT = {
   function createTableElement(title) {
     const wrapper = document.createElement("div");
     wrapper.className = "practice-wrapper";
-    const h = document.createElement("h3");
-    // title with small badge for personality
-    const badge = document.createElement("span");
-    badge.className = "badge";
-    badge.textContent = title.replace("Passage ", "P");
-    h.appendChild(badge);
-    const tspan = document.createElement("span");
-    tspan.style.marginLeft = "6px";
-    tspan.style.fontWeight = "600";
-    tspan.textContent = title;
-    h.appendChild(tspan);
-    // per-table stats (completed correct/total)
-    const stats = document.createElement("span");
-    stats.className = "table-stats";
-    stats.textContent = "0/0";
-    stats.dataset.passage = title;
-    stats.style.marginLeft = "8px";
-    stats.style.fontWeight = "700";
-    stats.style.fontSize = "0.85rem";
-    stats.style.color = "#475569";
-    h.appendChild(stats);
-    // Add average x/y for each passage
-    let avgSpan = null;
-    if (
-      title === "Passage 1" ||
-      title === "Passage 2" ||
-      title === "Passage 3"
-    ) {
-      avgSpan = document.createElement("span");
-      avgSpan.className = "table-avg table-stats";
-      avgSpan.style.marginLeft = "10px";
-      avgSpan.style.fontWeight = "800";
-      avgSpan.style.fontSize = "0.9rem";
-      avgSpan.style.color = "#164e63";
-      avgSpan.style.background =
-        "linear-gradient(90deg, #f0fdf4 0%, #fefce8 100%)";
-      avgSpan.style.boxShadow = "0 8px 20px rgba(16,185,129,0.06)";
-      avgSpan.style.border = "1px solid rgba(16,185,129,0.08)";
-      avgSpan.style.borderRadius = "10px";
-      avgSpan.style.padding = "6px 10px";
-      if (title === "Passage 1" || title === "Passage 2") {
-        avgSpan.textContent = "0/13";
-      } else if (title === "Passage 3") {
-        avgSpan.textContent = "0/14";
-      }
-      h.appendChild(avgSpan);
-    }
-    wrapper.appendChild(h);
 
-    const table = document.createElement("table");
-    table.className = "practice";
+    // Create header with badge, title, stats, and average
+    const avgValue = title === "Passage 3" ? "0/14" : "0/13";
+    const avgSpanHTML =
+      title === "Passage 1" || title === "Passage 2" || title === "Passage 3"
+        ? `<span class="table-avg table-stats" style="margin-left:10px;font-weight:800;font-size:0.9rem;color:#164e63;background:linear-gradient(90deg, #f0fdf4 0%, #fefce8 100%);box-shadow:0 8px 20px rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.08);border-radius:10px;padding:6px 10px;">${avgValue}</span>`
+        : "";
 
-    const thead = document.createElement("thead");
-    const headerRow = document.createElement("tr");
-    const corner = document.createElement("th");
-    corner.textContent = "";
-    headerRow.appendChild(corner);
-    cols.forEach((c) => {
-      const th = document.createElement("th");
-      th.textContent = c;
-      headerRow.appendChild(th);
-    });
-    thead.appendChild(headerRow);
-    table.appendChild(thead);
+    wrapper.innerHTML = html`
+      <h3>
+        <span class="badge">${title.replace("Passage ", "P")}</span>
+        <span style="margin-left:6px;font-weight:600;">${title}</span>
+        <span
+          class="table-stats"
+          data-passage="${title}"
+          style="margin-left:8px;font-weight:700;font-size:0.85rem;color:#475569;"
+          >0/0</span
+        >
+        ${avgSpanHTML}
+      </h3>
+      <table class="practice">
+        <thead>
+          <tr>
+            <th></th>
+            ${cols.map((c) => `<th>${c}</th>`).join("")}
+          </tr>
+        </thead>
+        <tbody>
+          ${rows
+            .map(
+              (r) => `
+          <tr>
+            <th>${r}</th>
+            ${cols
+              .map(
+                (c) => `
+              <td>
+                <div class="cell-wrap">
+                  <input type="text" class="practice-input" data-passage="${title}" data-col="${c}" data-row="${r}" placeholder="0/0">
+                  <button type="button" class="cell-status-btn" aria-label="Toggle cell status" data-passage="${title}" data-col="${c}" data-row="${r}"></button>
+                  <span class="cell-star"><img src="/star.png" alt="star" style="width:18px;height:18px;display:block" /></span>
+                </div>
+              </td>
+            `,
+              )
+              .join("")}
+          </tr>
+              `,
+            )
+            .join("")}
+        </tbody>
+      </table>
+      <div class="legend">
+        <span>Low</span>
+        <div class="legend-bar"></div>
+        <span>High</span>
+      </div>
+    `;
 
-    const tbody = document.createElement("tbody");
-    rows.forEach((r) => {
-      const tr = document.createElement("tr");
-      const th = document.createElement("th");
-      th.textContent = r;
-      tr.appendChild(th);
-      cols.forEach((c) => {
-        const td = document.createElement("td");
-        // wrapper to position star overlay and status button
-        const wrap = document.createElement("div");
-        wrap.className = "cell-wrap";
-        const input = document.createElement("input");
-        input.type = "text";
-        input.className = "practice-input";
-        input.setAttribute("data-passage", title);
-        input.setAttribute("data-col", c);
-        input.setAttribute("data-row", r);
-        input.placeholder = "0/0";
-        input.addEventListener("input", onCellInput);
-        input.addEventListener("blur", onCellBlur);
-        // status button for reading progress - always visible inside cell
-        const statusBtn = document.createElement("button");
-        statusBtn.className = "cell-status-btn";
-        statusBtn.setAttribute("type", "button");
-        statusBtn.setAttribute("aria-label", "Toggle cell status");
-        statusBtn.setAttribute("data-passage", title);
-        statusBtn.setAttribute("data-col", c);
-        statusBtn.setAttribute("data-row", r);
+    // Add event listeners after DOM creation
+    wrapper.querySelectorAll("input.practice-input").forEach((input) => {
+      input.addEventListener("input", onCellInput);
+      input.addEventListener("blur", onCellBlur);
+
+      const statusBtn = input.parentElement.querySelector(".cell-status-btn");
+      const td = input.closest("td");
+      if (statusBtn && td) {
         statusBtn.addEventListener("click", (e) =>
           onStatusBtnClick(e, input, td),
         );
-        const star = document.createElement("span");
-        star.className = "cell-star";
-        // use a small raster star image instead of inline SVG (18x18)
-        star.innerHTML =
-          '<img src="/star.png" alt="star" style="width:18px;height:18px;display:block" />';
-        wrap.appendChild(input);
-        wrap.appendChild(statusBtn);
-        wrap.appendChild(star);
-        td.appendChild(wrap);
-        tr.appendChild(td);
-      });
-      tbody.appendChild(tr);
+      }
     });
-    table.appendChild(tbody);
-    wrapper.appendChild(table);
-    // add legend explaining color gradient
-    const legend = document.createElement("div");
-    legend.className = "legend";
-    const left = document.createElement("span");
-    left.textContent = "Low";
-    const bar = document.createElement("div");
-    bar.className = "legend-bar";
-    const right = document.createElement("span");
-    right.textContent = "High";
-    legend.appendChild(left);
-    legend.appendChild(bar);
-    legend.appendChild(right);
-    wrapper.appendChild(legend);
+
     return wrapper;
   }
 
@@ -283,116 +232,67 @@ const SAVING_STATUS_TEXT = {
   function createListeningTableElement(title) {
     const wrapper = document.createElement("div");
     wrapper.className = "practice-wrapper";
-    const h = document.createElement("h3");
-    const badge = document.createElement("span");
-    badge.className = "badge";
-    badge.textContent = title.replace("Part ", "P");
-    h.appendChild(badge);
-    const tspan = document.createElement("span");
-    tspan.style.marginLeft = "6px";
-    tspan.style.fontWeight = "600";
-    tspan.textContent = title;
-    h.appendChild(tspan);
-    const stats = document.createElement("span");
-    stats.className = "table-stats";
-    stats.textContent = "0/0";
-    stats.dataset.part = title;
-    stats.style.marginLeft = "8px";
-    stats.style.fontWeight = "700";
-    stats.style.fontSize = "0.85rem";
-    stats.style.color = "#475569";
-    h.appendChild(stats);
-    // Add average x/10 for each listening part
-    let avgSpan = document.createElement("span");
-    avgSpan.className = "table-avg table-stats";
-    avgSpan.style.marginLeft = "10px";
-    avgSpan.style.fontWeight = "800";
-    avgSpan.style.fontSize = "0.9rem";
-    avgSpan.style.color = "#164e63";
-    avgSpan.style.background =
-      "linear-gradient(90deg, #f0fdf4 0%, #fefce8 100%)";
-    avgSpan.style.boxShadow = "0 8px 20px rgba(16,185,129,0.06)";
-    avgSpan.style.border = "1px solid rgba(16,185,129,0.08)";
-    avgSpan.style.borderRadius = "10px";
-    avgSpan.style.padding = "6px 10px";
-    avgSpan.innerHTML =
-      "<span style='color:#e11d48;font-weight:900;'>0</span>/10";
-    h.appendChild(avgSpan);
-    wrapper.appendChild(h);
 
-    const table = document.createElement("table");
-    table.className = "practice";
+    wrapper.innerHTML = `
+      <h3>
+        <span class="badge">${title.replace("Part ", "P")}</span>
+        <span style="margin-left:6px;font-weight:600;">${title}</span>
+        <span class="table-stats" data-part="${title}" style="margin-left:8px;font-weight:700;font-size:0.85rem;color:#475569;">0/0</span>
+        <span class="table-avg table-stats" style="margin-left:10px;font-weight:800;font-size:0.9rem;color:#164e63;background:linear-gradient(90deg, #f0fdf4 0%, #fefce8 100%);box-shadow:0 8px 20px rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.08);border-radius:10px;padding:6px 10px;"><span style='color:#e11d48;font-weight:900;'>0</span>/10</span>
+      </h3>
+      <table class="practice">
+        <thead>
+          <tr>
+            <th></th>
+            ${cols.map((c) => `<th>${c}</th>`).join("")}
+          </tr>
+        </thead>
+        <tbody>
+          ${rows
+            .map(
+              (r) => `
+            <tr>
+              <th>${r}</th>
+              ${cols
+                .map(
+                  (c) => `
+                <td>
+                  <div class="cell-wrap">
+                    <input type="text" class="practice-input" data-part="${title}" data-col="${c}" data-row="${r}" placeholder="0/0">
+                    <button type="button" class="cell-status-btn" aria-label="Toggle cell status" data-part="${title}" data-col="${c}" data-row="${r}"></button>
+                    <span class="cell-star"><img src="/star.png" alt="star" style="width:18px;height:18px;display:block" /></span>
+                  </div>
+                </td>
+              `,
+                )
+                .join("")}
+            </tr>
+          `,
+            )
+            .join("")}
+        </tbody>
+      </table>
+      <div class="legend">
+        <span>Low</span>
+        <div class="legend-bar"></div>
+        <span>High</span>
+      </div>
+    `;
 
-    const thead = document.createElement("thead");
-    const headerRow = document.createElement("tr");
-    const corner = document.createElement("th");
-    corner.textContent = "";
-    headerRow.appendChild(corner);
-    cols.forEach((c) => {
-      const th = document.createElement("th");
-      th.textContent = c;
-      headerRow.appendChild(th);
-    });
-    thead.appendChild(headerRow);
-    table.appendChild(thead);
+    // Add event listeners after DOM creation
+    wrapper.querySelectorAll("input.practice-input").forEach((input) => {
+      input.addEventListener("input", onCellInput);
+      input.addEventListener("blur", onCellBlur);
 
-    const tbody = document.createElement("tbody");
-    rows.forEach((r) => {
-      const tr = document.createElement("tr");
-      const th = document.createElement("th");
-      th.textContent = r;
-      tr.appendChild(th);
-      cols.forEach((c) => {
-        const td = document.createElement("td");
-        const wrap = document.createElement("div");
-        wrap.className = "cell-wrap";
-        const input = document.createElement("input");
-        input.type = "text";
-        input.className = "practice-input";
-        input.setAttribute("data-part", title);
-        input.setAttribute("data-col", c);
-        input.setAttribute("data-row", r);
-        input.placeholder = "0/0";
-        input.addEventListener("input", onCellInput);
-        input.addEventListener("blur", onCellBlur);
-        // status button for listening progress - always visible inside cell
-        const statusBtn = document.createElement("button");
-        statusBtn.className = "cell-status-btn";
-        statusBtn.setAttribute("type", "button");
-        statusBtn.setAttribute("aria-label", "Toggle cell status");
-        statusBtn.setAttribute("data-part", title);
-        statusBtn.setAttribute("data-col", c);
-        statusBtn.setAttribute("data-row", r);
+      const statusBtn = input.parentElement.querySelector(".cell-status-btn");
+      const td = input.closest("td");
+      if (statusBtn && td) {
         statusBtn.addEventListener("click", (e) =>
           onStatusBtnClick(e, input, td),
         );
-        const star = document.createElement("span");
-        star.className = "cell-star";
-        // use a small raster star image instead of inline SVG (18x18)
-        star.innerHTML =
-          '<img src="/star.png" alt="star" style="width:18px;height:18px;display:block" />';
-        wrap.appendChild(input);
-        wrap.appendChild(statusBtn);
-        wrap.appendChild(star);
-        td.appendChild(wrap);
-        tr.appendChild(td);
-      });
-      tbody.appendChild(tr);
+      }
     });
-    table.appendChild(tbody);
-    wrapper.appendChild(table);
-    const legend = document.createElement("div");
-    legend.className = "legend";
-    const left = document.createElement("span");
-    left.textContent = "Low";
-    const bar = document.createElement("div");
-    bar.className = "legend-bar";
-    const right = document.createElement("span");
-    right.textContent = "High";
-    legend.appendChild(left);
-    legend.appendChild(bar);
-    legend.appendChild(right);
-    wrapper.appendChild(legend);
+
     return wrapper;
   }
 
@@ -1163,21 +1063,20 @@ const SAVING_STATUS_TEXT = {
       const formattedDate = `${weekday}, ${dateOnly}`;
       const emoticon = getEmoticon(entry.feeling);
 
+      // Format feeling text with bold and URL handling
+      let feelingHtml = escapeHtml(entry.feeling).replace(/\n/g, "<br>");
+      // Bold **text**
+      feelingHtml = feelingHtml.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
+      // Break long URLs
+      feelingHtml = feelingHtml.replace(
+        /(https?:\/\/[^\s<>"']+)/g,
+        (url) => `<span class="break-url">${url}</span>`,
+      );
+
       const wrapper = document.createElement("div");
       wrapper.className = "history-entry new-entry";
       wrapper.setAttribute("data-id", entry.id || "");
       wrapper.style.animation = "fadeInUp 0.45s ease-out both";
-      // Tự động xuống dòng cho URL dài, không ảnh hưởng từ khác, đồng thời in đậm **text**
-      let feelingHtml = escapeHtml(entry.feeling).replace(/\n/g, "<br>");
-      // In đậm **text**
-      feelingHtml = feelingHtml.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
-      // Xuống dòng cho URL dài
-      feelingHtml = feelingHtml.replace(
-        /(https?:\/\/[^\s<>"']+)/g,
-        function (url) {
-          return `<span class=\"break-url\">${url}</span>`;
-        },
-      );
       wrapper.innerHTML = `
         <div class="history-header">
           <div class="history-left">
@@ -1185,25 +1084,15 @@ const SAVING_STATUS_TEXT = {
             <span class="history-date">${formattedDate}</span>
             <span class="history-user"> — ${escapeHtml(entry.name)}</span>
           </div>
-          <div class="history-actions"></div>
+          <div class="history-actions">
+            <button class="feeling-love-btn" data-id="${entry.id || ""}" aria-label="Like feeling">🤍</button>
+            <button class="feeling-delete-btn" data-id="${entry.id || ""}" aria-label="Delete feeling">
+              <img src="/delete.png" alt="Delete" class="feeling-delete-icon" />
+            </button>
+          </div>
         </div>
         <div class="history-feeling">"${feelingHtml}"</div>
       `;
-      // add love and delete action buttons into the header actions container
-      const actions = wrapper.querySelector(".history-actions");
-      const love = document.createElement("button");
-      love.className = "feeling-love-btn";
-      love.setAttribute("data-id", entry.id || "");
-      love.setAttribute("aria-label", "Like feeling");
-      love.textContent = "🤍";
-      if (actions) actions.appendChild(love);
-      const del = document.createElement("button");
-      del.className = "feeling-delete-btn";
-      del.setAttribute("data-id", entry.id || "");
-      del.setAttribute("aria-label", "Delete feeling");
-      del.innerHTML =
-        '<img src="/delete.png" alt="Delete" class="feeling-delete-icon" />';
-      if (actions) actions.appendChild(del);
       // prepend to top
       if (historyLog.firstChild)
         historyLog.insertBefore(wrapper, historyLog.firstChild);
@@ -1234,14 +1123,16 @@ const SAVING_STATUS_TEXT = {
       .replace(/\n/g, "\n");
     const textarea = document.createElement("textarea");
     textarea.value = original;
-    textarea.style.width = "98%";
-    textarea.style.minHeight = "40px";
-    textarea.style.fontSize = "1rem";
-    textarea.style.fontFamily = "inherit";
-    textarea.style.borderRadius = "8px";
-    textarea.style.border = "1px solid #cbd5e1";
-    textarea.style.margin = "2px 0";
-    textarea.style.padding = "4px 8px";
+    Object.assign(textarea.style, {
+      width: "98%",
+      minHeight: "40px",
+      fontSize: "1rem",
+      fontFamily: "inherit",
+      borderRadius: "8px",
+      border: "1px solid #cbd5e1",
+      margin: "2px 0",
+      padding: "4px 8px",
+    });
     feelingDiv.innerHTML = "";
     feelingDiv.appendChild(textarea);
     textarea.focus();
@@ -1939,73 +1830,50 @@ const SAVING_STATUS_TEXT = {
     ];
     calendarMonth.textContent = `${monthNames[month]} ${year}`;
 
-    // Clear grid
-    calendarGrid.innerHTML = "";
-
-    // Add day headers
+    // Get calendar data
     const dayHeaders = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    dayHeaders.forEach((day) => {
-      const header = document.createElement("div");
-      header.className = "calendar-day-header";
-      header.textContent = day;
-      calendarGrid.appendChild(header);
-    });
-
-    // Get first day of month (0 = Sunday, 1 = Monday, etc.)
     const firstDay = new Date(year, month, 1).getDay();
-    // Convert to Monday-first (0 = Monday, 6 = Sunday)
     const firstDayMon = firstDay === 0 ? 6 : firstDay - 1;
-
-    // Get last day of month
     const lastDate = new Date(year, month + 1, 0).getDate();
-
-    // Get last day of previous month
     const prevMonthLastDate = new Date(year, month, 0).getDate();
-
-    // Add previous month days
-    for (let i = firstDayMon - 1; i >= 0; i--) {
-      const day = document.createElement("div");
-      day.className = "calendar-day other-month";
-      day.textContent = prevMonthLastDate - i;
-      calendarGrid.appendChild(day);
-    }
-
-    // Add current month days
     const today = new Date();
     const isCurrentMonth =
       today.getFullYear() === year && today.getMonth() === month;
 
-    for (let date = 1; date <= lastDate; date++) {
-      const day = document.createElement("div");
-      day.className = "calendar-day";
-      day.textContent = date;
+    // Generate previous month days
+    const prevMonthDays = Array.from(
+      { length: firstDayMon },
+      (_, i) =>
+        `<div class="calendar-day other-month">${prevMonthLastDate - firstDayMon + i + 1}</div>`,
+    ).join("");
 
-      // Store date key for click handling
+    // Generate current month days
+    const currentMonthDays = Array.from({ length: lastDate }, (_, i) => {
+      const date = i + 1;
       const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
-      day.setAttribute("data-date", dateKey);
+      const isToday = isCurrentMonth && date === today.getDate();
+      const isActive = activeDays.has(dateKey);
+      const classes = ["calendar-day", isToday && "today", isActive && "active"]
+        .filter(Boolean)
+        .join(" ");
+      return `<div class="${classes}" data-date="${dateKey}">${date}</div>`;
+    }).join("");
 
-      // Check if today
-      if (isCurrentMonth && date === today.getDate()) {
-        day.classList.add("today");
-      }
+    // Calculate next month days needed
+    const totalDays = firstDayMon + lastDate;
+    const remainingCells = Math.ceil(totalDays / 7) * 7 - totalDays;
+    const nextMonthDays = Array.from(
+      { length: remainingCells },
+      (_, i) => `<div class="calendar-day other-month">${i + 1}</div>`,
+    ).join("");
 
-      // Check if active day
-      if (activeDays.has(dateKey)) {
-        day.classList.add("active");
-      }
-
-      calendarGrid.appendChild(day);
-    }
-
-    // Add next month days to fill the grid
-    const totalCells = calendarGrid.children.length - 7; // Subtract day headers
-    const remainingCells = Math.ceil(totalCells / 7) * 7 - totalCells;
-    for (let date = 1; date <= remainingCells; date++) {
-      const day = document.createElement("div");
-      day.className = "calendar-day other-month";
-      day.textContent = date;
-      calendarGrid.appendChild(day);
-    }
+    // Render calendar grid
+    calendarGrid.innerHTML = `
+      ${dayHeaders.map((day) => `<div class="calendar-day-header">${day}</div>`).join("")}
+      ${prevMonthDays}
+      ${currentMonthDays}
+      ${nextMonthDays}
+    `;
 
     // Update stats
     updateStats();
