@@ -213,8 +213,8 @@ const SAVING_STATUS_TEXT = {
 
     // Add event listeners after DOM creation
     wrapper.querySelectorAll("input.practice-input").forEach((input) => {
-      input.addEventListener("input", onCellInput);
-      input.addEventListener("blur", onCellBlur);
+      input.addEventListener("input", onPracticeCellInput);
+      addBlurOrEnterListener(input, onPracticeCellConfirm);
 
       const statusBtn = input.parentElement.querySelector(".cell-status-btn");
       const td = input.closest("td");
@@ -281,8 +281,8 @@ const SAVING_STATUS_TEXT = {
 
     // Add event listeners after DOM creation
     wrapper.querySelectorAll("input.practice-input").forEach((input) => {
-      input.addEventListener("input", onCellInput);
-      input.addEventListener("blur", onCellBlur);
+      input.addEventListener("input", onPracticeCellInput);
+      input.addEventListener("blur", onPracticeCellConfirm);
 
       const statusBtn = input.parentElement.querySelector(".cell-status-btn");
       const td = input.closest("td");
@@ -378,188 +378,80 @@ const SAVING_STATUS_TEXT = {
 
   // Update per-table and overall totals for reading/listening
   function updateTotals() {
-    // reading totals (only practice-container)
-    let readingCompleted = 0,
-      readingTotal = 0;
-    let passage1Totals = [];
-    let passage2Totals = [];
-    let passage3Totals = [];
-    const practiceContainerEl = document.getElementById("practice-container");
-    if (practiceContainerEl) {
-      practiceContainerEl
-        .querySelectorAll(".practice-wrapper")
-        .forEach((wrapper) => {
-          const tableStats = wrapper.querySelector(".table-stats");
-          const inputs = wrapper.querySelectorAll("input.practice-input");
-          const tableTotal = inputs.length;
-          let tableCompleted = 0;
-          let passage = "";
-          if (inputs.length > 0) {
-            passage = inputs[0].getAttribute("data-passage");
-          }
-          let passage1Correct = 0;
-          let passage1Total = 0;
-          let passage2Correct = 0;
-          let passage2Total = 0;
-          let passage3Correct = 0;
-          let passage3Total = 0;
-          inputs.forEach((input) => {
-            const v = (input.value || "").trim();
-            if (v) tableCompleted += 1;
-            if (passage === "Passage 1") {
-              const num = parseFloat(v);
-              if (!isNaN(num)) {
-                passage1Correct += num;
-                passage1Total += 1;
-              }
-            } else if (passage === "Passage 2") {
-              const num = parseFloat(v);
-              if (!isNaN(num)) {
-                passage2Correct += num;
-                passage2Total += 1;
-              }
-            } else if (passage === "Passage 3") {
-              const num = parseFloat(v);
-              if (!isNaN(num)) {
-                passage3Correct += num;
-                passage3Total += 1;
-              }
-            }
-          });
-          if (passage === "Passage 1" && passage1Total > 0) {
-            passage1Totals.push(passage1Correct / passage1Total);
-            // Update avgSpan for Passage 1
-            const wrapperHeader = wrapper.querySelector("h3");
-            const avgSpan = wrapperHeader
-              ? wrapperHeader.querySelector(".table-avg")
-              : null;
-            let x = passage1Correct / passage1Total;
-            x = Math.round(x * 10) / 10;
-            if (avgSpan) {
-              avgSpan.innerHTML = `<span style='color:#e11d48;font-weight:900;'>${x}</span>/13`;
-            }
-          } else if (passage === "Passage 2" && passage2Total > 0) {
-            passage2Totals.push(passage2Correct / passage2Total);
-            // Update avgSpan for Passage 2
-            const wrapperHeader = wrapper.querySelector("h3");
-            const avgSpan = wrapperHeader
-              ? wrapperHeader.querySelector(".table-avg")
-              : null;
-            let a = passage2Correct / passage2Total;
-            a = Math.round(a * 10) / 10;
-            if (avgSpan) {
-              avgSpan.innerHTML = `<span style='color:#e11d48;font-weight:900;'>${a}</span>/13`;
-            }
-          } else if (passage === "Passage 3" && passage3Total > 0) {
-            passage3Totals.push(passage3Correct / passage3Total);
-            // Update avgSpan for Passage 3
-            const wrapperHeader = wrapper.querySelector("h3");
-            const avgSpan = wrapperHeader
-              ? wrapperHeader.querySelector(".table-avg")
-              : null;
-            let c = passage3Correct / passage3Total;
-            c = Math.round(c * 10) / 10;
-            if (avgSpan) {
-              avgSpan.innerHTML = `<span style='color:#e11d48;font-weight:900;'>${c}</span>/14`;
-            }
-          }
-          if (passage === "Passage 2" && passage2Total > 0) {
-            passage2Totals.push(passage2Correct / passage2Total);
-          }
-          if (passage === "Passage 3" && passage3Total > 0) {
-            passage3Totals.push(passage3Correct / passage3Total);
-          }
-          if (tableStats) {
-            const pctTable =
-              tableTotal > 0
-                ? Math.round((tableCompleted / tableTotal) * 100)
-                : 0;
-            tableStats.innerHTML = `${tableCompleted}/${tableTotal} <span class="percent ${pctTable >= 90 ? "pulse" : ""}">${pctTable}%</span>`;
-          }
-          readingCompleted += tableCompleted;
-          readingTotal += tableTotal;
-        });
-    }
-    const readingEl = document.getElementById("readingTotals");
-    if (readingEl) {
-      const pct =
-        readingTotal > 0
-          ? Math.round((readingCompleted / readingTotal) * 100)
+    const containers = document.querySelectorAll(".practice-wrapper");
+    const statsMap = {};
+
+    for (const container of containers) {
+      const results = [
+        ...container.querySelectorAll("input.practice-input"),
+      ].map((input) => (input.value || "").trim());
+
+      let totalDone = 0;
+      let total = results.length;
+      let totalScore = 0;
+      let totalMaxScore = 0;
+
+      for (const result of results) {
+        if (!result) continue;
+
+        try {
+          const [correct, max] = result
+            .split("/")
+            .map((s) => parseInt(s.trim()));
+          if (isNaN(correct) || isNaN(max)) continue;
+
+          totalDone += 1;
+          totalScore += correct;
+          totalMaxScore += max;
+        } catch {}
+      }
+
+      const donePercentage =
+        total > 0 ? Math.round((totalDone / total) * 100) : 0;
+      const avgMaxScore =
+        totalDone > 0 ? Math.round((totalMaxScore / totalDone) * 10) / 10 : 0;
+      const avgScore =
+        totalDone > 0
+          ? Math.min(
+              avgMaxScore,
+              Math.round((totalScore / totalDone) * 10) / 10,
+            )
           : 0;
-      readingEl.innerHTML = `Completed ${readingCompleted}/${readingTotal} <span class="percent ${pct >= 90 ? "pulse" : ""}">${pct}%</span>`;
-    }
-    // Update readingExtra for Passage 1 average
-    const readingExtra = document.getElementById("readingExtra");
-    if (readingExtra) {
-      let x = 0,
-        a = 0,
-        c = 0;
-      if (passage1Totals.length > 0) {
-        x = passage1Totals.reduce((m, n) => m + n, 0) / passage1Totals.length;
-      }
-      if (passage2Totals.length > 0) {
-        a = passage2Totals.reduce((m, n) => m + n, 0) / passage2Totals.length;
-      }
-      if (passage3Totals.length > 0) {
-        c = passage3Totals.reduce((m, n) => m + n, 0) / passage3Totals.length;
-      }
-      x = Math.round(x * 10) / 10;
-      a = Math.round(a * 10) / 10;
-      c = Math.round(c * 10) / 10;
-      readingExtra.textContent = `Average ~~~P1 ${x}/13 ~~~ P2 ${a}/13 ~~~P3 ${c}/14`;
+
+      const statsEl = container.querySelector(".table-stats:not(.table-avg)");
+      statsEl.innerHTML = html`
+        ${totalDone}/${total}
+        <span class="percent ${donePercentage >= 90 ? "pulse" : ""}"
+          >${donePercentage}%</span
+        >
+      `;
+
+      const avgEl = container.querySelector(".table-avg");
+      avgEl.innerHTML = html`
+        <span style="color:#e11d48;font-weight:900;">${avgScore}</span>
+        /${avgMaxScore}
+      `;
+
+      const statsId = container.parentElement.dataset.statsId;
+      statsMap[statsId] = statsMap[statsId] || { done: 0, total: 0 };
+      statsMap[statsId].done += totalDone;
+      statsMap[statsId].total += total;
     }
 
-    // listening totals: elements under #listening-container
-    let listenCompleted = 0,
-      listenTotal = 0;
-    const listeningContainer = document.getElementById("listening-container");
-    if (listeningContainer) {
-      listeningContainer
-        .querySelectorAll(".practice-wrapper")
-        .forEach((wrapper) => {
-          const stats = wrapper.querySelector(".table-stats");
-          const avgSpan = wrapper.querySelector(".table-avg");
-          const inputs = wrapper.querySelectorAll("input.practice-input");
-          const tableTotal = inputs.length;
-          let tableCompleted = 0;
-          let correctSum = 0;
-          let correctCount = 0;
-          inputs.forEach((input) => {
-            const v = (input.value || "").trim();
-            if (v) tableCompleted += 1;
-            const num = parseFloat(v);
-            if (!isNaN(num)) {
-              correctSum += num;
-              correctCount += 1;
-            }
-          });
-          if (stats) {
-            const pctTable =
-              tableTotal > 0
-                ? Math.round((tableCompleted / tableTotal) * 100)
-                : 0;
-            stats.innerHTML = `${tableCompleted}/${tableTotal} <span class="percent ${pctTable >= 90 ? "pulse" : ""}">${pctTable}%</span>`;
-          }
-          if (avgSpan) {
-            let avg = 0;
-            if (correctCount > 0) {
-              avg = Math.round((correctSum / correctCount) * 10) / 10;
-            }
-            avgSpan.innerHTML = `<span style='color:#e11d48;font-weight:900;'>${avg}</span>/10`;
-          }
-          listenCompleted += tableCompleted;
-          listenTotal += tableTotal;
-        });
-    }
-    const listenEl = document.getElementById("listeningTotals");
-    if (listenEl) {
-      const pct2 =
-        listenTotal > 0 ? Math.round((listenCompleted / listenTotal) * 100) : 0;
-      listenEl.innerHTML = `Completed ${listenCompleted}/${listenTotal} <span class="percent ${pct2 >= 90 ? "pulse" : ""}">${pct2}%</span>`;
+    for (const [key, stats] of Object.entries(statsMap)) {
+      const statSpan = document.getElementById(key);
+      const donePercentage =
+        stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
+      statSpan.innerHTML = html`
+        Completed ${stats.done}/${stats.total}
+        <span class="percent ${donePercentage >= 90 ? "pulse" : ""}">
+          ${donePercentage}%
+        </span>
+      `;
     }
   }
 
-  function onCellInput(e) {
+  function onPracticeCellInput(e) {
     const input = e.target;
     const v = (input.value || "").trim();
     const m = v.match(/^(\d+)\s*\/\s*(\d+)$/);
@@ -609,7 +501,7 @@ const SAVING_STATUS_TEXT = {
     }
   }
 
-  function onCellBlur(e) {
+  function onPracticeCellConfirm(e) {
     const input = e.target;
     const prevValue = input.getAttribute("data-prev-value") || "";
     const currentValue = (input.value || "").trim();
@@ -630,10 +522,13 @@ const SAVING_STATUS_TEXT = {
         result: currentValue,
       }),
     })
-      .then(() => setProgressStatus(SAVING_STATUSES.SAVED, "Saved"))
+      .then(() => {
+        setProgressStatus(SAVING_STATUSES.SAVED, "Saved");
+        updateTotals();
+      })
       .catch(() => setProgressStatus(SAVING_STATUSES.ERROR, "Save failed"));
 
-    onCellInput(e);
+    onPracticeCellInput(e);
 
     // Mark today as active if user entered a valid value (not 0/0 or empty)
     if (currentValue && currentValue !== "0/0" && currentValue !== prevValue) {
@@ -747,7 +642,7 @@ const SAVING_STATUS_TEXT = {
       input.setAttribute("data-prev-value", v);
       // trigger coloring
       const ev = { target: input };
-      onCellInput(ev);
+      onPracticeCellInput(ev);
 
       // restore button marked state
       if (v) {
@@ -770,10 +665,14 @@ const SAVING_STATUS_TEXT = {
     // reflect saved status in UI and update totals
     try {
       setProgressStatus(SAVING_STATUSES.SAVED, "Saved");
-    } catch (e) {}
+    } catch (e) {
+      console.error("Failed to set progress status after loading", e);
+    }
     try {
       updateTotals();
-    } catch (e) {}
+    } catch (e) {
+      console.error("Failed to update totals after loading", e);
+    }
   }
 
   // Load saved progress from server and populate inputs
