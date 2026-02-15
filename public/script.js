@@ -233,12 +233,21 @@ const SAVING_STATUS_TEXT = {
     const wrapper = document.createElement("div");
     wrapper.className = "practice-wrapper";
 
-    wrapper.innerHTML = `
+    wrapper.innerHTML = html`
       <h3>
         <span class="badge">${title.replace("Part ", "P")}</span>
         <span style="margin-left:6px;font-weight:600;">${title}</span>
-        <span class="table-stats" data-part="${title}" style="margin-left:8px;font-weight:700;font-size:0.85rem;color:#475569;">0/0</span>
-        <span class="table-avg table-stats" style="margin-left:10px;font-weight:800;font-size:0.9rem;color:#164e63;background:linear-gradient(90deg, #f0fdf4 0%, #fefce8 100%);box-shadow:0 8px 20px rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.08);border-radius:10px;padding:6px 10px;"><span style='color:#e11d48;font-weight:900;'>0</span>/10</span>
+        <span
+          class="table-stats"
+          data-part="${title}"
+          style="margin-left:8px;font-weight:700;font-size:0.85rem;color:#475569;"
+          >0/0</span
+        >
+        <span
+          class="table-avg table-stats"
+          style="margin-left:10px;font-weight:800;font-size:0.9rem;color:#164e63;background:linear-gradient(90deg, #f0fdf4 0%, #fefce8 100%);box-shadow:0 8px 20px rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.08);border-radius:10px;padding:6px 10px;"
+          ><span style="color:#e11d48;font-weight:900;">0</span>/10</span
+        >
       </h3>
       <table class="practice">
         <thead>
@@ -711,32 +720,6 @@ const SAVING_STATUS_TEXT = {
     }
   });
 
-  // Load today's feeling on page load (ưu tiên localStorage)
-  async function loadTodayFeeling() {
-    // Luôn clear input khi load lại trang, không tự động điền lại nội dung cũ
-    feelingInput.value = "";
-    // Nếu muốn load từ server (nếu cần), có thể bổ sung logic ở đây
-    // Nếu muốn giữ lại logic cũ, hãy bỏ comment các dòng dưới:
-    // try {
-    //   const key = getTodayKey();
-    //   const local = localStorage.getItem(key);
-    //   if (local && local.trim()) {
-    //     feelingInput.value = local;
-    //     return;
-    //   }
-    //   const today = key.replace('feelings_', '');
-    //   const res = await fetch(`/feeling?date=${today}`);
-    //   if (res.ok) {
-    //     const data = await res.json();
-    //     if (data && data.feeling) {
-    //       feelingInput.value = data.feeling;
-    //     }
-    //   }
-    // } catch (e) {
-    //   console.warn('Failed to load feeling', e);
-    // }
-  }
-
   // Load feeling history from server
   window.loadFeelingHistory = async function () {
     try {
@@ -1111,7 +1094,6 @@ const SAVING_STATUS_TEXT = {
   `;
   document.head.appendChild(style);
 
-  loadTodayFeeling();
   loadFeelingHistory();
 })();
 
