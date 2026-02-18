@@ -435,6 +435,12 @@ const SAVING_STATUS_TEXT = {
     const prevValue = input.getAttribute("data-prev-value") || "";
     const currentValue = (input.value || "").trim();
 
+    // Skip API call if value hasn't changed
+    if (prevValue === currentValue) {
+      onPracticeCellInput(e);
+      return;
+    }
+
     const partName =
       input.getAttribute("data-passage") || input.getAttribute("data-part");
     const cambridgeVersion = input.getAttribute("data-row");
