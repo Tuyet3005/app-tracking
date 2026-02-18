@@ -198,7 +198,7 @@ const SAVING_STATUS_TEXT = {
     wrapper.innerHTML = html`
       <h3>
         <span class="badge">${title.replace("Passage ", "P")}</span>
-        <span style="margin-left:6px;font-weight:600;">${title}</span>
+        <span style="width:8ch;margin-left:6px;font-weight:600;">${title}</span>
         <span
           class="table-stats"
           data-passage="${title}"
@@ -268,7 +268,7 @@ const SAVING_STATUS_TEXT = {
     wrapper.innerHTML = html`
       <h3>
         <span class="badge">${title.replace("Part ", "P")}</span>
-        <span style="margin-left:6px;font-weight:600;">${title}</span>
+        <span style="width:8ch;margin-left:6px;font-weight:600;">${title}</span>
         <span
           class="table-stats"
           data-part="${title}"
