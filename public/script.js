@@ -1236,6 +1236,17 @@ const SAVING_STATUS_TEXT = {
     }
   }
 
+  function formatTodoText(text) {
+    // First escape HTML
+    let html = escapeHtml(text);
+    // Then convert URLs to clickable links
+    html = html.replace(
+      /(https?:\/\/[^\s<>"']+)/g,
+      (url) => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="break-url">${url}</a>`
+    );
+    return html;
+  }
+
   function renderTodos() {
     const activeTodos = todos.filter((t) => !t.completed);
     const completedTodos = todos.filter((t) => t.completed);
@@ -1248,10 +1259,11 @@ const SAVING_STATUS_TEXT = {
       todoListActive.innerHTML = activeTodos
         .map((todo) => {
           const dateStr = formatDate(todo.createdAt);
+          const formattedText = formatTodoText(todo.text);
           return `
           <div class="todo-item" data-id="${todo.id}">
             <div class="todo-checkbox" data-id="${todo.id}"></div>
-            <div class="todo-text">${escapeHtml(todo.text)}</div>
+            <div class="todo-text">${formattedText}</div>
             <div class="todo-date">${dateStr}</div>
             <button class="todo-delete" data-id="${todo.id}">
               <img src="/delete.png" alt="Delete" class="todo-delete-icon" />
@@ -1270,10 +1282,11 @@ const SAVING_STATUS_TEXT = {
       todoListCompleted.innerHTML = completedTodos
         .map((todo) => {
           const dateStr = formatDate(todo.createdAt);
+          const formattedText = formatTodoText(todo.text);
           return `
           <div class="todo-item completed" data-id="${todo.id}">
             <div class="todo-checkbox" data-id="${todo.id}"></div>
-            <div class="todo-text">${escapeHtml(todo.text)}</div>
+            <div class="todo-text">${formattedText}</div>
             <div class="todo-date">${dateStr}</div>
             <button class="todo-delete" data-id="${todo.id}">
               <img src="/delete.png" alt="Delete" class="todo-delete-icon" />
