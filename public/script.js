@@ -149,6 +149,41 @@ const SAVING_STATUS_TEXT = {
   const rows = Array.from({ length: 11 }, (_, i) => `Cam${10 + i}`); // Cam10..Cam20
   const cols = Array.from({ length: 4 }, (_, i) => `Test${i + 1}`); // Test1..Test4
 
+  // Centralized function to generate input cell HTML
+  function inputCellHtml({ dataType, dataValue, col, row }) {
+    return html`
+      <td>
+        <div
+          class="cell-wrapper"
+        >
+          <input
+            type="text"
+            class="practice-input"
+            data-${dataType}="${dataValue}"
+            data-col="${col}"
+            data-row="${row}"
+            placeholder="0/0"
+          />
+          <button
+            type="button"
+            class="cell-status-btn"
+            aria-label="Toggle cell status"
+            data-${dataType}="${dataValue}"
+            data-col="${col}"
+            data-row="${row}"
+          ></button>
+          <div class="cell-star">
+            <img
+              src="/star.png"
+              alt="star"
+              style="width:18px;height:18px;display:block"
+            />
+          </div>
+        </div>
+      </td>
+    `;
+  }
+
   function createTableElement(title) {
     const wrapper = document.createElement("div");
     wrapper.className = "practice-wrapper";
@@ -186,16 +221,13 @@ const SAVING_STATUS_TEXT = {
           <tr>
             <th>${r}</th>
             ${cols
-              .map(
-                (c) => `
-              <td>
-                <div class="cell-wrap">
-                  <input type="text" class="practice-input" data-passage="${title}" data-col="${c}" data-row="${r}" placeholder="0/0">
-                  <button type="button" class="cell-status-btn" aria-label="Toggle cell status" data-passage="${title}" data-col="${c}" data-row="${r}"></button>
-                  <span class="cell-star"><img src="/star.png" alt="star" style="width:18px;height:18px;display:block" /></span>
-                </div>
-              </td>
-            `,
+              .map((c) =>
+                inputCellHtml({
+                  dataType: "passage",
+                  dataValue: title,
+                  col: c,
+                  row: r,
+                }),
               )
               .join("")}
           </tr>
@@ -263,16 +295,13 @@ const SAVING_STATUS_TEXT = {
             <tr>
               <th>${r}</th>
               ${cols
-                .map(
-                  (c) => `
-                <td>
-                  <div class="cell-wrap">
-                    <input type="text" class="practice-input" data-part="${title}" data-col="${c}" data-row="${r}" placeholder="0/0">
-                    <button type="button" class="cell-status-btn" aria-label="Toggle cell status" data-part="${title}" data-col="${c}" data-row="${r}"></button>
-                    <span class="cell-star"><img src="/star.png" alt="star" style="width:18px;height:18px;display:block" /></span>
-                  </div>
-                </td>
-              `,
+                .map((c) =>
+                  inputCellHtml({
+                    dataType: "part",
+                    dataValue: title,
+                    col: c,
+                    row: r,
+                  }),
                 )
                 .join("")}
             </tr>
@@ -387,8 +416,8 @@ const SAVING_STATUS_TEXT = {
     const td = input.closest("td");
 
     if (!m) {
-      input.style.background = "";
-      input.style.color = "";
+      input.parentElement.style.background = "";
+      input.parentElement.style.color = "";
       input.title = "";
       // remove cell border
       if (td) td.classList.remove("cell-with-value");
@@ -401,8 +430,8 @@ const SAVING_STATUS_TEXT = {
     const correct = parseInt(m[1], 10);
     const total = parseInt(m[2], 10);
     if (isNaN(correct) || isNaN(total) || total <= 0) {
-      input.style.background = "";
-      input.style.color = "";
+      input.parentElement.style.background = "";
+      input.parentElement.style.color = "";
       input.title = "Invalid numbers";
       // remove cell border
       if (td) td.classList.remove("cell-with-value");
@@ -414,7 +443,7 @@ const SAVING_STATUS_TEXT = {
 
     const wrong = Math.max(0, total - correct);
     const ratio = Math.max(0, Math.min(1, correct / total));
-    applyColor(input, ratio);
+    applyColor(input.parentElement, ratio);
     input.title = `${correct}/${total} — wrong: ${wrong} — ${Math.round(ratio * 100)}%`;
 
     // show cell border for cells with values
@@ -544,8 +573,8 @@ const SAVING_STATUS_TEXT = {
       .querySelectorAll("input.practice-input")
       .forEach((input) => {
         input.value = "";
-        input.style.background = "";
-        input.style.color = "";
+        input.parentElement.style.background = "";
+        input.parentElement.style.color = "";
         input.title = "";
         const starEl = input.parentElement.querySelector(".cell-star");
         if (starEl) starEl.style.display = "none";
