@@ -822,82 +822,6 @@ const SAVING_STATUS_TEXT = {
     }
   };
 
-  // Optimistically append a new feeling entry to the top of the history UI
-  function appendFeelingToHistory(entry) {
-    try {
-      const historyLog = document.getElementById("history-log");
-      if (!historyLog) return;
-      // remove empty placeholder if present
-      const empty = historyLog.querySelector(".history-empty");
-      if (empty) empty.remove();
-
-      const ts =
-        entry.timestamp ||
-        (entry.date ? entry.date + "T00:00:00Z" : new Date().toISOString());
-      const dateObj = new Date(ts);
-      const weekday = dateObj.toLocaleDateString("en-GB", {
-        timeZone: "Asia/Ho_Chi_Minh",
-        weekday: "short",
-      });
-      const dateOnly = dateObj.toLocaleDateString("en-GB", {
-        timeZone: "Asia/Ho_Chi_Minh",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      });
-      const formattedDate = `${weekday}, ${dateOnly}`;
-      const emoticon = getEmoticon(entry.feeling);
-
-      // Format feeling text with bold and URL handling
-      let feelingHtml = escapeHtml(entry.feeling).replace(/\n/g, "<br>");
-      // Bold **text**
-      feelingHtml = feelingHtml.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
-      // Break long URLs
-      feelingHtml = feelingHtml.replace(
-        /(https?:\/\/[^\s<>"']+)/g,
-        (url) => `<span class="break-url">${url}</span>`,
-      );
-
-      const wrapper = document.createElement("div");
-      wrapper.className = "history-entry new-entry";
-      wrapper.setAttribute("data-id", entry.id || "");
-      wrapper.style.animation = "fadeInUp 0.45s ease-out both";
-      wrapper.innerHTML = `
-        <div class="history-header">
-          <div class="history-left">
-            <span class="history-emoticon">${emoticon}</span>
-            <span class="history-date">${formattedDate}</span>
-            <span class="history-user"> — ${escapeHtml(entry.name)}</span>
-          </div>
-          <div class="history-actions">
-            <button class="feeling-love-btn" data-id="${entry.id || ""}" aria-label="Like feeling">🤍</button>
-            <button class="feeling-delete-btn" data-id="${entry.id || ""}" aria-label="Delete feeling">
-              <img src="/delete.png" alt="Delete" class="feeling-delete-icon" />
-            </button>
-          </div>
-        </div>
-        <div class="history-feeling">"${feelingHtml}"</div>
-      `;
-      // prepend to top
-      if (historyLog.firstChild)
-        historyLog.insertBefore(wrapper, historyLog.firstChild);
-      else historyLog.appendChild(wrapper);
-
-      // temporary highlight for positive feedback
-      wrapper.style.boxShadow = "0 8px 30px rgba(99,102,241,0.08)";
-      wrapper.style.border = "1.5px solid rgba(99,102,241,0.09)";
-      setTimeout(() => {
-        wrapper.style.boxShadow = "";
-        wrapper.style.border = "";
-      }, 2000);
-    } catch (e) {
-      // fallback: refresh later
-      console.warn("Failed to optimistically append feeling", e);
-    }
-  }
-
-  // delegated handler for love buttons in history log
-
   // Enable double-click to edit feelings in the log
   document.addEventListener("dblclick", function (ev) {
     const feelingDiv = ev.target.closest(".history-feeling");
@@ -1378,7 +1302,6 @@ const SAVING_STATUS_TEXT = {
       const res = await fetch("/todos");
       if (res.ok) {
         const data = await res.json();
-        console.log("Loaded todos data:", data);
         if (data && Array.isArray(data.todos)) {
           // Convert database format (completed: 0/1) to boolean
           todos = data.todos.map((todo) => ({
@@ -1386,7 +1309,6 @@ const SAVING_STATUS_TEXT = {
             completed: !!todo.completed, // Convert 0/1 to boolean
             createdAt: todo.createdAt || new Date().toISOString(),
           }));
-          console.log("Todos after load:", todos);
           renderTodos();
         }
       }
@@ -1422,7 +1344,6 @@ const SAVING_STATUS_TEXT = {
     if (checkbox) {
       const id = checkbox.getAttribute("data-id");
       const todo = todos.find((t) => t.id == id); // Use == for type coercion
-      console.log("Toggle complete - ID:", id, "Found todo:", todo);
       if (todo) {
         const newCompleted = !todo.completed;
         // Update locally first for immediate UI feedback
@@ -1433,10 +1354,8 @@ const SAVING_STATUS_TEXT = {
       }
     } else if (deleteBtn) {
       const id = deleteBtn.getAttribute("data-id");
-      console.log("Delete - ID:", id, "Before filter:", todos.length);
       // Remove from local array first for immediate UI feedback
       todos = todos.filter((t) => t.id != id); // Use != for type coercion
-      console.log("After filter:", todos.length);
       renderTodos();
       // Then sync with server
       await deleteTodo(id);
@@ -1445,28 +1364,14 @@ const SAVING_STATUS_TEXT = {
 
   // Handle double click to edit todo text
   function handleTodoDoubleClick(e) {
-    console.log("Double-click event:", e);
     const todoText = e.target.closest(".todo-text");
-    console.log("Found todoText element:", todoText);
-
-    if (!todoText) {
-      console.log("No .todo-text element found, returning");
-      return;
-    }
+    if (!todoText) return;
 
     const todoItem = todoText.closest(".todo-item");
-    console.log("Found todoItem:", todoItem);
-
     const id = todoItem?.getAttribute("data-id");
-    console.log("Todo ID:", id);
-
     const todo = todos.find((t) => t.id == id); // Use == instead of === for type coercion
-    console.log("Found todo:", todo);
 
-    if (!todo) {
-      console.log("No matching todo found, returning");
-      return;
-    }
+    if (!todo) return;
 
     // Create input element
     const input = document.createElement("input");
@@ -1474,14 +1379,10 @@ const SAVING_STATUS_TEXT = {
     input.className = "todo-edit-input";
     input.value = todo.text;
 
-    console.log("Created input, replacing todoText element");
-
     // Replace text with input
     todoText.replaceWith(input);
     input.focus();
     input.select();
-
-    console.log("Input should now be visible and focused");
 
     // Save on Enter or blur
     async function saveEdit() {
@@ -1538,7 +1439,6 @@ const SAVING_STATUS_TEXT = {
       if (res.ok) {
         const data = await res.json();
         activeDays = new Set(data.activeDays || []);
-        console.log("Loaded activity data from storage:", data);
       }
     } catch (e) {
       console.warn("Failed to load activity data", e);
@@ -1557,15 +1457,12 @@ const SAVING_STATUS_TEXT = {
   // Add activity day to backend
   async function addActivityDay(dateKey) {
     try {
-      console.log("Adding activity day:", dateKey);
       const res = await fetch("/activity", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ date: dateKey }),
       });
-      if (res.ok) {
-        console.log("Activity day added successfully");
-      } else {
+      if (!res.ok) {
         console.error("Failed to add activity day, status:", res.status);
       }
     } catch (e) {
@@ -1576,15 +1473,12 @@ const SAVING_STATUS_TEXT = {
   // Remove activity day from backend
   async function removeActivityDay(dateKey) {
     try {
-      console.log("Removing activity day:", dateKey);
       const res = await fetch("/activity", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ date: dateKey }),
       });
-      if (res.ok) {
-        console.log("Activity day removed successfully");
-      } else {
+      if (!res.ok) {
         console.error("Failed to remove activity day, status:", res.status);
       }
     } catch (e) {
@@ -1596,14 +1490,10 @@ const SAVING_STATUS_TEXT = {
   window.markTodayActive = function () {
     const today = new Date();
     const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    console.log("Marking day as active:", dateKey);
     if (!activeDays.has(dateKey)) {
       activeDays.add(dateKey);
-      console.log("New active day added. Total active days:", activeDays.size);
       addActivityDay(dateKey);
       renderCalendar();
-    } else {
-      console.log("Day already marked as active");
     }
   };
 
@@ -1719,15 +1609,11 @@ const SAVING_STATUS_TEXT = {
       // Toggle active state
       if (activeDays.has(dateKey)) {
         activeDays.delete(dateKey);
-        console.log("Removed active day:", dateKey);
         removeActivityDay(dateKey);
       } else {
         activeDays.add(dateKey);
-        console.log("Added active day:", dateKey);
         addActivityDay(dateKey);
       }
-
-      console.log("Total active days:", activeDays.size);
 
       // Re-render
       renderCalendar();
