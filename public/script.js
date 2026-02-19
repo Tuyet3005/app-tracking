@@ -172,13 +172,6 @@ const SAVING_STATUS_TEXT = {
             data-col="${col}"
             data-row="${row}"
           ></button>
-          <div class="cell-star">
-            <img
-              src="/star.png"
-              alt="star"
-              style="width:18px;height:18px;display:block"
-            />
-          </div>
         </div>
       </td>
     `;
@@ -421,9 +414,8 @@ const SAVING_STATUS_TEXT = {
       input.title = "";
       // remove cell border
       if (td) td.classList.remove("cell-with-value");
-      // hide star if any
-      const starEl = input.parentElement.querySelector(".cell-star");
-      if (starEl) starEl.style.display = "none";
+      // hide star
+      input.parentElement.classList.remove("starred");
       return;
     }
 
@@ -435,9 +427,8 @@ const SAVING_STATUS_TEXT = {
       input.title = "Invalid numbers";
       // remove cell border
       if (td) td.classList.remove("cell-with-value");
-      // hide star if any
-      const starEl = input.parentElement.querySelector(".cell-star");
-      if (starEl) starEl.style.display = "none";
+      // hide star
+      input.parentElement.classList.remove("starred");
       return;
     }
 
@@ -452,10 +443,10 @@ const SAVING_STATUS_TEXT = {
     }
 
     // show star when perfect
-    const starEl = input.parentElement.querySelector(".cell-star");
-    if (starEl) {
-      if (correct === total && total > 0) starEl.style.display = "block";
-      else starEl.style.display = "none";
+    if (correct === total && total > 0) {
+      input.parentElement.classList.add("starred");
+    } else {
+      input.parentElement.classList.remove("starred");
     }
   }
 
@@ -576,8 +567,7 @@ const SAVING_STATUS_TEXT = {
         input.parentElement.style.background = "";
         input.parentElement.style.color = "";
         input.title = "";
-        const starEl = input.parentElement.querySelector(".cell-star");
-        if (starEl) starEl.style.display = "none";
+        input.parentElement.classList.remove("starred");
       });
   }
 
