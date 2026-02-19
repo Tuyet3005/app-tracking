@@ -19,6 +19,6 @@
     "module": "preserve",
     "moduleResolution": "bundler",
     "outDir": "dist",
-    "sourceMap": true,
+    "sourceMap": true
   }
 }

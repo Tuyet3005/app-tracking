@@ -153,9 +153,7 @@ const SAVING_STATUS_TEXT = {
   function inputCellHtml({ dataType, dataValue, col, row }) {
     return html`
       <td>
-        <div
-          class="cell-wrapper"
-        >
+        <div class="cell-wrapper">
           <input
             type="text"
             class="practice-input"
@@ -1232,7 +1230,8 @@ const SAVING_STATUS_TEXT = {
     // Then convert URLs to clickable links
     html = html.replace(
       /(https?:\/\/[^\s<>"']+)/g,
-      (url) => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="break-url">${url}</a>`
+      (url) =>
+        `<a href="${url}" target="_blank" rel="noopener noreferrer" class="break-url">${url}</a>`,
     );
     return html;
   }

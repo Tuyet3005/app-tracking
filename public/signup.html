@@ -1,457 +1,550 @@
 <!doctype html>
 <html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="icon" type="image/png" href="favicon.png" />
-  <title>🌼 Sign Up - IELTS Orange Tracking</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { height: 100%; }
-    body {
-      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      background: linear-gradient(180deg, #fbfdff 0%, #f2f6fb 100%);
-      background-size: cover;
-      background-repeat: no-repeat;
-      background-attachment: fixed;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #0f172a;
-    }
-
-    .signup-container {
-      width: 100%;
-      max-width: 420px;
-      padding: 40px;
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 252, 255, 0.98) 100%);
-      backdrop-filter: blur(10px);
-      border-radius: 24px;
-      box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12), 0 8px 24px rgba(2, 6, 23, 0.08);
-      border: 1px solid rgba(99, 102, 241, 0.08);
-      animation: slide-up 0.5s ease-out;
-    }
-
-    @keyframes slide-up {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <title>🌼 Sign Up - IELTS Orange Tracking</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
       }
-      to {
-        opacity: 1;
-        transform: translateY(0);
+      html,
+      body {
+        height: 100%;
       }
-    }
+      body {
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          "Helvetica Neue",
+          Arial;
+        background: linear-gradient(180deg, #fbfdff 0%, #f2f6fb 100%);
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #0f172a;
+      }
 
-    .signup-header {
-      text-align: center;
-      margin-bottom: 32px;
-    }
-
-    .signup-title {
-      font-size: 2rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, #FF6B9D 0%, #FFA500 50%, #FFD700 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 8px;
-      letter-spacing: 0.5px;
-    }
-
-    .signup-subtitle {
-      font-size: 0.95rem;
-      color: #64748b;
-      font-weight: 500;
-    }
-
-    .form-group {
-      margin-bottom: 20px;
-    }
-
-    .form-label {
-      display: block;
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: #334155;
-      margin-bottom: 8px;
-      letter-spacing: 0.3px;
-    }
-
-    .form-input {
-      width: 100%;
-      padding: 12px 16px;
-      font-size: 1rem;
-      border: 2px solid rgba(15, 23, 42, 0.08);
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.99);
-      color: #0f172a;
-      transition: all 200ms;
-      font-family: inherit;
-    }
-
-    .form-input:focus {
-      outline: none;
-      border-color: rgba(99, 102, 241, 0.35);
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
-      background: #ffffff;
-    }
-
-    .input-with-icon { position: relative }
-    .show-pass-btn {
-      position: absolute;
-      right: 8px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      font-size: 1.05rem;
-      padding: 6px;
-      border-radius: 8px;
-      transition: background 150ms;
-      color: #475569;
-    }
-    .show-pass-btn:hover { background: rgba(15,23,42,0.03) }
-
-    .password-hint {
-      margin-top: 6px;
-      font-size: 0.8rem;
-      color: #64748b;
-      line-height: 1.4;
-    }
-
-    .signup-button {
-      width: 100%;
-      padding: 14px 24px;
-      font-size: 1.05rem;
-      font-weight: 800;
-      color: #ffffff;
-      background: linear-gradient(135deg, #FF6B9D 0%, #FFA500 50%, #FFD700 100%);
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 250ms;
-      box-shadow: 0 8px 24px rgba(255, 107, 157, 0.3), 0 2px 8px rgba(0, 0, 0, 0.1);
-      letter-spacing: 0.5px;
-      margin-top: 8px;
-    }
-
-    .signup-button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 32px rgba(255, 107, 157, 0.4), 0 4px 12px rgba(0, 0, 0, 0.12);
-    }
-
-    .signup-button:active {
-      transform: translateY(0);
-    }
-
-    .signup-button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .error-message {
-      margin-top: 16px;
-      padding: 12px 16px;
-      background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.05) 100%);
-      border: 1px solid rgba(239, 68, 68, 0.2);
-      border-radius: 10px;
-      color: #dc2626;
-      font-size: 0.9rem;
-      font-weight: 600;
-      text-align: center;
-      animation: shake 0.4s ease-out;
-      display: none;
-    }
-
-    .error-message.show {
-      display: block;
-    }
-
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      25% { transform: translateX(-10px); }
-      75% { transform: translateX(10px); }
-    }
-
-    .success-message {
-      margin-top: 16px;
-      padding: 12px 16px;
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.05) 100%);
-      border: 1px solid rgba(16, 185, 129, 0.2);
-      border-radius: 10px;
-      color: #059669;
-      font-size: 0.9rem;
-      font-weight: 600;
-      text-align: center;
-      display: none;
-    }
-
-    .success-message.show {
-      display: block;
-    }
-
-    .login-link {
-      margin-top: 24px;
-      text-align: center;
-      font-size: 0.9rem;
-      color: #64748b;
-    }
-
-    .login-link a {
-      color: #FF6B9D;
-      font-weight: 700;
-      text-decoration: none;
-      transition: color 200ms;
-    }
-
-    .login-link a:hover {
-      color: #FFA500;
-      text-decoration: underline;
-    }
-
-    @media (max-width: 480px) {
       .signup-container {
-        padding: 32px 24px;
-        margin: 20px;
+        width: 100%;
+        max-width: 420px;
+        padding: 40px;
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.98) 0%,
+          rgba(250, 252, 255, 0.98) 100%
+        );
+        backdrop-filter: blur(10px);
+        border-radius: 24px;
+        box-shadow:
+          0 20px 60px rgba(15, 23, 42, 0.12),
+          0 8px 24px rgba(2, 6, 23, 0.08);
+        border: 1px solid rgba(99, 102, 241, 0.08);
+        animation: slide-up 0.5s ease-out;
+      }
+
+      @keyframes slide-up {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .signup-header {
+        text-align: center;
+        margin-bottom: 32px;
       }
 
       .signup-title {
-        font-size: 1.6rem;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="signup-container">
-    <div class="signup-header">
-      <h1 class="signup-title">🌼 Create Account 🌼</h1>
-      <p class="signup-subtitle">Start tracking your IELTS progress</p>
-    </div>
-
-    <form id="signupForm">
-      <div class="form-group">
-        <label for="displayName" class="form-label">Display Name</label>
-        <input
-          type="text"
-          id="displayName"
-          name="displayName"
-          class="form-input"
-          placeholder="Your name"
-          required
-          autocomplete="name"
-          minlength="2"
-          maxlength="50"
-        />
-        <div class="password-hint">Your full name or preferred display name</div>
-      </div>
-
-      <div class="form-group">
-        <label for="username" class="form-label">Username</label>
-        <input
-          type="text"
-          id="username"
-          name="username"
-          class="form-input"
-          placeholder="Choose a username"
-          required
-          autocomplete="username"
-          minlength="3"
-          maxlength="30"
-        />
-        <div class="password-hint">3-30 characters, letters, numbers, and underscores</div>
-      </div>
-
-      <div class="form-group">
-        <label for="password" class="form-label">Password</label>
-        <div class="input-with-icon">
-          <input
-            type="password"
-            id="password"
-            name="password"
-            class="form-input"
-            placeholder="Choose a secure password"
-            required
-            autocomplete="new-password"
-            minlength="6"
-          />
-          <button type="button" id="togglePassword" class="show-pass-btn" aria-pressed="false" title="Show password">👁️</button>
-        </div>
-        <div class="password-hint">At least 6 characters</div>
-      </div>
-
-      <div class="form-group">
-        <label for="confirmPassword" class="form-label">Confirm Password</label>
-        <div class="input-with-icon">
-          <input
-            type="password"
-            id="confirmPassword"
-            name="confirmPassword"
-            class="form-input"
-            placeholder="Re-enter your password"
-            required
-            autocomplete="new-password"
-            minlength="6"
-          />
-          <button type="button" id="toggleConfirmPassword" class="show-pass-btn" aria-pressed="false" title="Show password">👁️</button>
-        </div>
-      </div>
-
-      <button type="submit" class="signup-button" id="signupButton">
-        Create Account
-      </button>
-    </form>
-
-    <div id="errorMessage" class="error-message"></div>
-    <div id="successMessage" class="success-message"></div>
-
-    <div class="login-link">
-      Already have an account? <a href="/login.html">Sign in</a>
-    </div>
-  </div>
-
-  <script>
-    const signupForm = document.getElementById('signupForm');
-    const signupButton = document.getElementById('signupButton');
-    const errorMessage = document.getElementById('errorMessage');
-    const successMessage = document.getElementById('successMessage');
-    const displayNameInput = document.getElementById('displayName');
-    const usernameInput = document.getElementById('username');
-    const passwordInput = document.getElementById('password');
-    const confirmPasswordInput = document.getElementById('confirmPassword');
-
-    function showError(message) {
-      errorMessage.textContent = message;
-      errorMessage.classList.add('show');
-      successMessage.classList.remove('show');
-    }
-
-    function showSuccess(message) {
-      successMessage.textContent = message;
-      successMessage.classList.add('show');
-      errorMessage.classList.remove('show');
-    }
-
-    function hideMessages() {
-      errorMessage.classList.remove('show');
-      successMessage.classList.remove('show');
-    }
-
-    // Validate username format
-    function validateUsername(username) {
-      const usernameRegex = /^[a-zA-Z0-9_]{3,30}$/;
-      return usernameRegex.test(username);
-    }
-
-    signupForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      hideMessages();
-
-      const displayName = displayNameInput.value.trim();
-      const username = usernameInput.value.trim();
-      const password = passwordInput.value;
-      const confirmPassword = confirmPasswordInput.value;
-
-      // Client-side validation
-      if (!displayName) {
-        showError('Display name is required');
-        return;
+        font-size: 2rem;
+        font-weight: 800;
+        background: linear-gradient(
+          135deg,
+          #ff6b9d 0%,
+          #ffa500 50%,
+          #ffd700 100%
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 8px;
+        letter-spacing: 0.5px;
       }
 
-      if (displayName.length < 2 || displayName.length > 50) {
-        showError('Display name must be between 2 and 50 characters');
-        return;
+      .signup-subtitle {
+        font-size: 0.95rem;
+        color: #64748b;
+        font-weight: 500;
       }
 
-      if (!username) {
-        showError('Username is required');
-        return;
+      .form-group {
+        margin-bottom: 20px;
       }
 
-      if (!validateUsername(username)) {
-        showError('Username must be 3-30 characters and contain only letters, numbers, and underscores');
-        return;
+      .form-label {
+        display: block;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #334155;
+        margin-bottom: 8px;
+        letter-spacing: 0.3px;
       }
 
-      if (!password) {
-        showError('Password is required');
-        return;
+      .form-input {
+        width: 100%;
+        padding: 12px 16px;
+        font-size: 1rem;
+        border: 2px solid rgba(15, 23, 42, 0.08);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.99);
+        color: #0f172a;
+        transition: all 200ms;
+        font-family: inherit;
       }
 
-      if (password.length < 6) {
-        showError('Password must be at least 6 characters long');
-        return;
+      .form-input:focus {
+        outline: none;
+        border-color: rgba(99, 102, 241, 0.35);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+        background: #ffffff;
       }
 
-      if (password !== confirmPassword) {
-        showError('Passwords do not match');
-        return;
+      .input-with-icon {
+        position: relative;
+      }
+      .show-pass-btn {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        font-size: 1.05rem;
+        padding: 6px;
+        border-radius: 8px;
+        transition: background 150ms;
+        color: #475569;
+      }
+      .show-pass-btn:hover {
+        background: rgba(15, 23, 42, 0.03);
       }
 
-      // Disable button during request
-      signupButton.disabled = true;
-      signupButton.textContent = 'Creating account...';
+      .password-hint {
+        margin-top: 6px;
+        font-size: 0.8rem;
+        color: #64748b;
+        line-height: 1.4;
+      }
 
-      try {
-        const response = await fetch('/signup', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ displayName, username, password }),
-        });
+      .signup-button {
+        width: 100%;
+        padding: 14px 24px;
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: #ffffff;
+        background: linear-gradient(
+          135deg,
+          #ff6b9d 0%,
+          #ffa500 50%,
+          #ffd700 100%
+        );
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 250ms;
+        box-shadow:
+          0 8px 24px rgba(255, 107, 157, 0.3),
+          0 2px 8px rgba(0, 0, 0, 0.1);
+        letter-spacing: 0.5px;
+        margin-top: 8px;
+      }
 
-        const data = await response.json();
+      .signup-button:hover {
+        transform: translateY(-2px);
+        box-shadow:
+          0 12px 32px rgba(255, 107, 157, 0.4),
+          0 4px 12px rgba(0, 0, 0, 0.12);
+      }
 
-        if (response.ok) {
-          showSuccess('Account created successfully! Redirecting to home...');
-          setTimeout(() => {
-            window.location.href = '/';
-          }, 1500);
-        } else {
-          showError(data.error || 'Signup failed. Please try again.');
-          signupButton.disabled = false;
-          signupButton.textContent = 'Create Account';
+      .signup-button:active {
+        transform: translateY(0);
+      }
+
+      .signup-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .error-message {
+        margin-top: 16px;
+        padding: 12px 16px;
+        background: linear-gradient(
+          135deg,
+          rgba(239, 68, 68, 0.08) 0%,
+          rgba(239, 68, 68, 0.05) 100%
+        );
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        border-radius: 10px;
+        color: #dc2626;
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-align: center;
+        animation: shake 0.4s ease-out;
+        display: none;
+      }
+
+      .error-message.show {
+        display: block;
+      }
+
+      @keyframes shake {
+        0%,
+        100% {
+          transform: translateX(0);
         }
-      } catch (error) {
-        console.error('Signup error:', error);
-        showError('An error occurred. Please try again.');
-        signupButton.disabled = false;
-        signupButton.textContent = 'Create Account';
+        25% {
+          transform: translateX(-10px);
+        }
+        75% {
+          transform: translateX(10px);
+        }
       }
-    });
 
-    // Clear error message when user starts typing
-    displayNameInput.addEventListener('input', hideMessages);
-    usernameInput.addEventListener('input', hideMessages);
-    passwordInput.addEventListener('input', hideMessages);
-    confirmPasswordInput.addEventListener('input', hideMessages);
+      .success-message {
+        margin-top: 16px;
+        padding: 12px 16px;
+        background: linear-gradient(
+          135deg,
+          rgba(16, 185, 129, 0.08) 0%,
+          rgba(16, 185, 129, 0.05) 100%
+        );
+        border: 1px solid rgba(16, 185, 129, 0.2);
+        border-radius: 10px;
+        color: #059669;
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-align: center;
+        display: none;
+      }
 
-    // Toggle password visibility for both fields
-    const togglePassword = document.getElementById('togglePassword');
-    const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
-    if (togglePassword) {
-      togglePassword.addEventListener('click', () => {
-        const t = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-        passwordInput.setAttribute('type', t);
-        const pressed = t === 'text';
-        togglePassword.setAttribute('aria-pressed', pressed ? 'true' : 'false');
-        togglePassword.textContent = pressed ? '🙈' : '👁️';
-        togglePassword.title = pressed ? 'Hide password' : 'Show password';
+      .success-message.show {
+        display: block;
+      }
+
+      .login-link {
+        margin-top: 24px;
+        text-align: center;
+        font-size: 0.9rem;
+        color: #64748b;
+      }
+
+      .login-link a {
+        color: #ff6b9d;
+        font-weight: 700;
+        text-decoration: none;
+        transition: color 200ms;
+      }
+
+      .login-link a:hover {
+        color: #ffa500;
+        text-decoration: underline;
+      }
+
+      @media (max-width: 480px) {
+        .signup-container {
+          padding: 32px 24px;
+          margin: 20px;
+        }
+
+        .signup-title {
+          font-size: 1.6rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="signup-container">
+      <div class="signup-header">
+        <h1 class="signup-title">🌼 Create Account 🌼</h1>
+        <p class="signup-subtitle">Start tracking your IELTS progress</p>
+      </div>
+
+      <form id="signupForm">
+        <div class="form-group">
+          <label for="displayName" class="form-label">Display Name</label>
+          <input
+            type="text"
+            id="displayName"
+            name="displayName"
+            class="form-input"
+            placeholder="Your name"
+            required
+            autocomplete="name"
+            minlength="2"
+            maxlength="50"
+          />
+          <div class="password-hint">
+            Your full name or preferred display name
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="username" class="form-label">Username</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            class="form-input"
+            placeholder="Choose a username"
+            required
+            autocomplete="username"
+            minlength="3"
+            maxlength="30"
+          />
+          <div class="password-hint">
+            3-30 characters, letters, numbers, and underscores
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password" class="form-label">Password</label>
+          <div class="input-with-icon">
+            <input
+              type="password"
+              id="password"
+              name="password"
+              class="form-input"
+              placeholder="Choose a secure password"
+              required
+              autocomplete="new-password"
+              minlength="6"
+            />
+            <button
+              type="button"
+              id="togglePassword"
+              class="show-pass-btn"
+              aria-pressed="false"
+              title="Show password"
+            >
+              👁️
+            </button>
+          </div>
+          <div class="password-hint">At least 6 characters</div>
+        </div>
+
+        <div class="form-group">
+          <label for="confirmPassword" class="form-label"
+            >Confirm Password</label
+          >
+          <div class="input-with-icon">
+            <input
+              type="password"
+              id="confirmPassword"
+              name="confirmPassword"
+              class="form-input"
+              placeholder="Re-enter your password"
+              required
+              autocomplete="new-password"
+              minlength="6"
+            />
+            <button
+              type="button"
+              id="toggleConfirmPassword"
+              class="show-pass-btn"
+              aria-pressed="false"
+              title="Show password"
+            >
+              👁️
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="signup-button" id="signupButton">
+          Create Account
+        </button>
+      </form>
+
+      <div id="errorMessage" class="error-message"></div>
+      <div id="successMessage" class="success-message"></div>
+
+      <div class="login-link">
+        Already have an account? <a href="/login.html">Sign in</a>
+      </div>
+    </div>
+
+    <script>
+      const signupForm = document.getElementById("signupForm");
+      const signupButton = document.getElementById("signupButton");
+      const errorMessage = document.getElementById("errorMessage");
+      const successMessage = document.getElementById("successMessage");
+      const displayNameInput = document.getElementById("displayName");
+      const usernameInput = document.getElementById("username");
+      const passwordInput = document.getElementById("password");
+      const confirmPasswordInput = document.getElementById("confirmPassword");
+
+      function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.classList.add("show");
+        successMessage.classList.remove("show");
+      }
+
+      function showSuccess(message) {
+        successMessage.textContent = message;
+        successMessage.classList.add("show");
+        errorMessage.classList.remove("show");
+      }
+
+      function hideMessages() {
+        errorMessage.classList.remove("show");
+        successMessage.classList.remove("show");
+      }
+
+      // Validate username format
+      function validateUsername(username) {
+        const usernameRegex = /^[a-zA-Z0-9_]{3,30}$/;
+        return usernameRegex.test(username);
+      }
+
+      signupForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        hideMessages();
+
+        const displayName = displayNameInput.value.trim();
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value;
+        const confirmPassword = confirmPasswordInput.value;
+
+        // Client-side validation
+        if (!displayName) {
+          showError("Display name is required");
+          return;
+        }
+
+        if (displayName.length < 2 || displayName.length > 50) {
+          showError("Display name must be between 2 and 50 characters");
+          return;
+        }
+
+        if (!username) {
+          showError("Username is required");
+          return;
+        }
+
+        if (!validateUsername(username)) {
+          showError(
+            "Username must be 3-30 characters and contain only letters, numbers, and underscores",
+          );
+          return;
+        }
+
+        if (!password) {
+          showError("Password is required");
+          return;
+        }
+
+        if (password.length < 6) {
+          showError("Password must be at least 6 characters long");
+          return;
+        }
+
+        if (password !== confirmPassword) {
+          showError("Passwords do not match");
+          return;
+        }
+
+        // Disable button during request
+        signupButton.disabled = true;
+        signupButton.textContent = "Creating account...";
+
+        try {
+          const response = await fetch("/signup", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ displayName, username, password }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            showSuccess("Account created successfully! Redirecting to home...");
+            setTimeout(() => {
+              window.location.href = "/";
+            }, 1500);
+          } else {
+            showError(data.error || "Signup failed. Please try again.");
+            signupButton.disabled = false;
+            signupButton.textContent = "Create Account";
+          }
+        } catch (error) {
+          console.error("Signup error:", error);
+          showError("An error occurred. Please try again.");
+          signupButton.disabled = false;
+          signupButton.textContent = "Create Account";
+        }
       });
-    }
-    if (toggleConfirmPassword) {
-      toggleConfirmPassword.addEventListener('click', () => {
-        const t = confirmPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-        confirmPasswordInput.setAttribute('type', t);
-        const pressed = t === 'text';
-        toggleConfirmPassword.setAttribute('aria-pressed', pressed ? 'true' : 'false');
-        toggleConfirmPassword.textContent = pressed ? '🙈' : '👁️';
-        toggleConfirmPassword.title = pressed ? 'Hide password' : 'Show password';
-      });
-    }
-  </script>
-</body>
+
+      // Clear error message when user starts typing
+      displayNameInput.addEventListener("input", hideMessages);
+      usernameInput.addEventListener("input", hideMessages);
+      passwordInput.addEventListener("input", hideMessages);
+      confirmPasswordInput.addEventListener("input", hideMessages);
+
+      // Toggle password visibility for both fields
+      const togglePassword = document.getElementById("togglePassword");
+      const toggleConfirmPassword = document.getElementById(
+        "toggleConfirmPassword",
+      );
+      if (togglePassword) {
+        togglePassword.addEventListener("click", () => {
+          const t =
+            passwordInput.getAttribute("type") === "password"
+              ? "text"
+              : "password";
+          passwordInput.setAttribute("type", t);
+          const pressed = t === "text";
+          togglePassword.setAttribute(
+            "aria-pressed",
+            pressed ? "true" : "false",
+          );
+          togglePassword.textContent = pressed ? "🙈" : "👁️";
+          togglePassword.title = pressed ? "Hide password" : "Show password";
+        });
+      }
+      if (toggleConfirmPassword) {
+        toggleConfirmPassword.addEventListener("click", () => {
+          const t =
+            confirmPasswordInput.getAttribute("type") === "password"
+              ? "text"
+              : "password";
+          confirmPasswordInput.setAttribute("type", t);
+          const pressed = t === "text";
+          toggleConfirmPassword.setAttribute(
+            "aria-pressed",
+            pressed ? "true" : "false",
+          );
+          toggleConfirmPassword.textContent = pressed ? "🙈" : "👁️";
+          toggleConfirmPassword.title = pressed
+            ? "Hide password"
+            : "Show password";
+        });
+      }
+    </script>
+  </body>
 </html>

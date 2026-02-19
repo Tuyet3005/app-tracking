@@ -150,13 +150,13 @@ export class DrizzleStore extends Store {
   // and this method is used to signal to the store the given session is active,
   // potentially resetting the idle timer.
   override async touch(sid: string, sess: SessionData, cb?: Callback) {
-    const newCookies: SessionData['cookie'] = { ...sess.cookie, expires: null };
+    const newCookies: SessionData["cookie"] = { ...sess.cookie, expires: null };
     const { expiresAt } = this.getExpiresAt({
       ...sess,
       cookie: newCookies,
     });
     newCookies.expires = new Date(expiresAt * 1000);
-    
+
     try {
       await db
         .update(schema.sessions)

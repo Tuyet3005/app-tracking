@@ -5,92 +5,300 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Admin — IELTS Orange tracking</title>
     <style>
-    :root{--bg:#f6f9fc;--card:#ffffff;--muted:#6b7280}
-    html, body { height: 100%; }
-    body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; padding: 20px; min-height: 100vh; background: linear-gradient(180deg,#fbfdff 0%, #f2f6fb 100%); background-size: cover; background-repeat: no-repeat; background-attachment: fixed; color:#0f172a }
-    h1 { font-size: 1.8rem; margin:0 0 8px 0 }
-    h2 { margin-top:18px; color:#0b1220; font-size:1.28rem; font-weight:700; display:inline-block; padding:8px 14px; border-radius:10px; background: linear-gradient(90deg, rgba(255,214,130,0.10), rgba(255,214,130,0)); box-shadow: 0 6px 18px rgba(2,6,23,0.03); }
-    .hidden { display: none; }
-    .loading { color: var(--muted); }
-    pre { background:#ffffff;padding:12px;border-radius:12px;overflow:auto;border:1px solid rgba(15,23,42,0.04); box-shadow:0 8px 20px rgba(15,23,42,0.04); font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial }
+      :root {
+        --bg: #f6f9fc;
+        --card: #ffffff;
+        --muted: #6b7280;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          "Helvetica Neue",
+          Arial;
+        padding: 20px;
+        min-height: 100vh;
+        background: linear-gradient(180deg, #fbfdff 0%, #f2f6fb 100%);
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        color: #0f172a;
+      }
+      h1 {
+        font-size: 1.8rem;
+        margin: 0 0 8px 0;
+      }
+      h2 {
+        margin-top: 18px;
+        color: #0b1220;
+        font-size: 1.28rem;
+        font-weight: 700;
+        display: inline-block;
+        padding: 8px 14px;
+        border-radius: 10px;
+        background: linear-gradient(
+          90deg,
+          rgba(255, 214, 130, 0.1),
+          rgba(255, 214, 130, 0)
+        );
+        box-shadow: 0 6px 18px rgba(2, 6, 23, 0.03);
+      }
+      .hidden {
+        display: none;
+      }
+      .loading {
+        color: var(--muted);
+      }
+      pre {
+        background: #ffffff;
+        padding: 12px;
+        border-radius: 12px;
+        overflow: auto;
+        border: 1px solid rgba(15, 23, 42, 0.04);
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          "Helvetica Neue",
+          Arial;
+      }
 
-    /* Beautiful section headers */
-    .section-header {
-      margin-top: 8px;
-      color: #0b1220;
-      font-size: 1.4rem;
-      font-weight: 800;
-      letter-spacing: 0.2px;
-      display: inline-flex;
-      gap: 10px;
-      padding: 6px 8px;
-      border-radius: 6px;
-      background: transparent;
-      box-shadow: none;
-      border: none;
-      align-items: center;
-    }
-    .header-substats { margin: 0 0 10px 0; margin-left: 12px }
-    .section-row { display: flex; align-items: center; gap: 12px; flex-wrap: nowrap }
-    .header-substats span {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      padding: 8px 12px;
-      border-radius: 12px;
-      font-weight: 800;
-      font-size: 0.95rem;
-      color: #0b1220;
-      background: linear-gradient(90deg, #fff8e6 0%, #fff2f6 60%, #fff1e6 100%);
-      box-shadow: 0 10px 30px rgba(255,165,0,0.08);
-      border: 1px solid rgba(255,165,0,0.12);
-    }
+      /* Beautiful section headers */
+      .section-header {
+        margin-top: 8px;
+        color: #0b1220;
+        font-size: 1.4rem;
+        font-weight: 800;
+        letter-spacing: 0.2px;
+        display: inline-flex;
+        gap: 10px;
+        padding: 6px 8px;
+        border-radius: 6px;
+        background: transparent;
+        box-shadow: none;
+        border: none;
+        align-items: center;
+      }
+      .header-substats {
+        margin: 0 0 10px 0;
+        margin-left: 12px;
+      }
+      .section-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: nowrap;
+      }
+      .header-substats span {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+        border-radius: 12px;
+        font-weight: 800;
+        font-size: 0.95rem;
+        color: #0b1220;
+        background: linear-gradient(
+          90deg,
+          #fff8e6 0%,
+          #fff2f6 60%,
+          #fff1e6 100%
+        );
+        box-shadow: 0 10px 30px rgba(255, 165, 0, 0.08);
+        border: 1px solid rgba(255, 165, 0, 0.12);
+      }
 
-    /* Button styles (primary) */
-    .vocab-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:999px; border:2px solid rgba(255,255,255,0.5); background: linear-gradient(135deg, #b5c7ff 0%, #d4b5f0 30%, #ffc8f0 60%, #b5e9ff 100%); color:#2d3748; font-size:0.92rem; font-weight:700; text-decoration:none; box-shadow:0 6px 16px rgba(181,199,255,0.28), 0 3px 10px rgba(212,181,240,0.18); transition:all 220ms ease; cursor:pointer }
-    .vocab-btn:hover { transform:translateY(-3px) scale(1.02); box-shadow:0 10px 24px rgba(181,199,255,0.32) }
+      /* Button styles (primary) */
+      .vocab-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        border: 2px solid rgba(255, 255, 255, 0.5);
+        background: linear-gradient(
+          135deg,
+          #b5c7ff 0%,
+          #d4b5f0 30%,
+          #ffc8f0 60%,
+          #b5e9ff 100%
+        );
+        color: #2d3748;
+        font-size: 0.92rem;
+        font-weight: 700;
+        text-decoration: none;
+        box-shadow:
+          0 6px 16px rgba(181, 199, 255, 0.28),
+          0 3px 10px rgba(212, 181, 240, 0.18);
+        transition: all 220ms ease;
+        cursor: pointer;
+      }
+      .vocab-btn:hover {
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 10px 24px rgba(181, 199, 255, 0.32);
+      }
 
-    /* Secondary (danger) */
-    .logout-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:999px; border:2px solid rgba(255,99,99,0.3); background: linear-gradient(135deg, #ff6b9d 0%, #ff8a9d 50%, #ffa5b4 100%); color:#fff; font-size:0.9rem; font-weight:700; cursor:pointer }
+      /* Secondary (danger) */
+      .logout-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        border: 2px solid rgba(255, 99, 99, 0.3);
+        background: linear-gradient(
+          135deg,
+          #ff6b9d 0%,
+          #ff8a9d 50%,
+          #ffa5b4 100%
+        );
+        color: #fff;
+        font-size: 0.9rem;
+        font-weight: 700;
+        cursor: pointer;
+      }
 
-    /* Card / wrapper */
-    .practice-wrapper { min-width: 0; background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%); border-radius: 14px; padding: 14px; box-shadow: 0 6px 22px rgba(15,23,42,0.06); border: 1px solid rgba(99,102,241,0.06); transition: box-shadow 200ms }
-    .practice-wrapper:hover { box-shadow: 0 12px 36px rgba(15,23,42,0.08) }
+      /* Card / wrapper */
+      .practice-wrapper {
+        min-width: 0;
+        background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+        border-radius: 14px;
+        padding: 14px;
+        box-shadow: 0 6px 22px rgba(15, 23, 42, 0.06);
+        border: 1px solid rgba(99, 102, 241, 0.06);
+        transition: box-shadow 200ms;
+      }
+      .practice-wrapper:hover {
+        box-shadow: 0 12px 36px rgba(15, 23, 42, 0.08);
+      }
 
-    /* Table styles */
-    table { width:100%; border-collapse:collapse; background:transparent }
-    table.practice th, table.practice td { border: none; padding: 8px 6px; text-align: center; font-size: 0.95rem }
-    table thead th { background: linear-gradient(90deg, rgba(99,102,241,0.04), rgba(99,102,241,0.02)); color:#475569; font-weight:700; padding:10px; border-radius:6px; text-align:left }
-    table tbody td { padding:10px 8px; border-bottom:1px solid rgba(15,23,42,0.04); font-size:0.95rem }
-    table tr:hover td { background: rgba(99,102,241,0.03) }
+      /* Table styles */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: transparent;
+      }
+      table.practice th,
+      table.practice td {
+        border: none;
+        padding: 8px 6px;
+        text-align: center;
+        font-size: 0.95rem;
+      }
+      table thead th {
+        background: linear-gradient(
+          90deg,
+          rgba(99, 102, 241, 0.04),
+          rgba(99, 102, 241, 0.02)
+        );
+        color: #475569;
+        font-weight: 700;
+        padding: 10px;
+        border-radius: 6px;
+        text-align: left;
+      }
+      table tbody td {
+        padding: 10px 8px;
+        border-bottom: 1px solid rgba(15, 23, 42, 0.04);
+        font-size: 0.95rem;
+      }
+      table tr:hover td {
+        background: rgba(99, 102, 241, 0.03);
+      }
 
-    /* page controls */
-    #adminContent { max-width: 1100px; margin: 0 auto; }
-    .controls { display:flex; gap:8px; align-items:center }
+      /* page controls */
+      #adminContent {
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+      .controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
 
-    /* Cute accents */
-    .avatar {
-      width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;color:white;box-shadow:0 6px 18px rgba(2,6,23,0.06);margin-right:8px;font-size:0.98rem
-    }
-    .avatar.ice { background: linear-gradient(135deg,#a5d9ff,#b5c7ff) }
-    .avatar.pink { background: linear-gradient(135deg,#ffd6e8,#ffc8f0) }
-    .user-pill { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; background: linear-gradient(90deg,#fff,#fffaf0); border:1px solid rgba(15,23,42,0.03); font-weight:700 }
+      /* Cute accents */
+      .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        color: white;
+        box-shadow: 0 6px 18px rgba(2, 6, 23, 0.06);
+        margin-right: 8px;
+        font-size: 0.98rem;
+      }
+      .avatar.ice {
+        background: linear-gradient(135deg, #a5d9ff, #b5c7ff);
+      }
+      .avatar.pink {
+        background: linear-gradient(135deg, #ffd6e8, #ffc8f0);
+      }
+      .user-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #fff, #fffaf0);
+        border: 1px solid rgba(15, 23, 42, 0.03);
+        font-weight: 700;
+      }
 
-    .page-badge { font-weight:800; background: linear-gradient(90deg,#fff0f6,#fff8f0); padding:6px 10px; border-radius:999px; box-shadow:0 6px 18px rgba(255,192,203,0.06); }
+      .page-badge {
+        font-weight: 800;
+        background: linear-gradient(90deg, #fff0f6, #fff8f0);
+        padding: 6px 10px;
+        border-radius: 999px;
+        box-shadow: 0 6px 18px rgba(255, 192, 203, 0.06);
+      }
 
-    .impersonate-row { transition: all 200ms ease; }
-    .impersonate-row:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(15,23,42,0.06); }
+      .impersonate-row {
+        transition: all 200ms ease;
+      }
+      .impersonate-row:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+      }
 
-    .vocab-btn.small { padding:6px 10px; font-size:0.88rem }
+      .vocab-btn.small {
+        padding: 6px 10px;
+        font-size: 0.88rem;
+      }
 
-    .header-emoji { font-size:1.6rem; animation: emoji-bounce 2s infinite }
+      .header-emoji {
+        font-size: 1.6rem;
+        animation: emoji-bounce 2s infinite;
+      }
 
-    .cute-pre { background: linear-gradient(135deg,#fffaf6,#fff8ff); border-radius:12px; padding:12px; border:1px solid rgba(15,23,42,0.03); box-shadow:0 8px 30px rgba(99,102,241,0.04); }
+      .cute-pre {
+        background: linear-gradient(135deg, #fffaf6, #fff8ff);
+        border-radius: 12px;
+        padding: 12px;
+        border: 1px solid rgba(15, 23, 42, 0.03);
+        box-shadow: 0 8px 30px rgba(99, 102, 241, 0.04);
+      }
     </style>
   </head>
   <body>
     <div id="adminContent">
-      <div class="section-row" style="justify-content:space-between;align-items:center">
+      <div
+        class="section-row"
+        style="justify-content: space-between; align-items: center"
+      >
         <div class="section-header">
           <span class="header-emoji">🛠️</span>
           <span class="header-text">Admin Panel</span>
@@ -100,26 +308,49 @@
         </div>
       </div>
 
-      <p id="status" class="loading" style="margin-top:12px">Checking permissions…</p>
+      <p id="status" class="loading" style="margin-top: 12px">
+        Checking permissions…
+      </p>
 
-      <p style="margin:12px 0;color:#374151">Welcome, tuyet. This is the admin area.</p>
+      <p style="margin: 12px 0; color: #374151">
+        Welcome, tuyet. This is the admin area.
+      </p>
 
       <section id="impersonateSection">
         <h2>Impersonate users</h2>
-        
 
-        <div style="margin:8px 0" class="controls">
-          <label>Page size: <select id="pageSizeSelect"><option>10</option><option>20</option><option>50</option></select></label>
+        <div style="margin: 8px 0" class="controls">
+          <label
+            >Page size:
+            <select id="pageSizeSelect">
+              <option>10</option>
+              <option>20</option>
+              <option>50</option>
+            </select></label
+          >
         </div>
 
         <div id="impersonateContainer" class="practice-wrapper">
           <table id="impersonateTable" class="practice">
-            <thead><tr><th style="width:56px"></th><th style="text-align:left">Username</th><th style="text-align:left">Display name</th><th></th></tr></thead>
-            <tbody id="impersonateBody"><tr><td colspan="4">No data</td></tr></tbody>
+            <thead>
+              <tr>
+                <th style="width: 56px"></th>
+                <th style="text-align: left">Username</th>
+                <th style="text-align: left">Display name</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="impersonateBody">
+              <tr>
+                <td colspan="4">No data</td>
+              </tr>
+            </tbody>
           </table>
         </div>
 
-        <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+        <div
+          style="margin-top: 8px; display: flex; gap: 8px; align-items: center"
+        >
           <button id="prevPage" class="vocab-btn small">Prev</button>
           <span id="pageInfo" class="page-badge">Page 1</span>
           <button id="nextPage" class="vocab-btn small">Next</button>
@@ -128,12 +359,24 @@
 
       <hr />
 
-      <div style="display:flex;gap:10px;align-items:center;margin-top:10px">
+      <div
+        style="display: flex; gap: 10px; align-items: center; margin-top: 10px"
+      >
         <button id="refreshUsers" class="vocab-btn">Load public users</button>
-        <a href="/index.html" class="vocab-btn" style="text-decoration:none;background:linear-gradient(135deg,#fff,#f3f4ff);color:#0b1220;padding:8px 12px">Back to app</a>
+        <a
+          href="/index.html"
+          class="vocab-btn"
+          style="
+            text-decoration: none;
+            background: linear-gradient(135deg, #fff, #f3f4ff);
+            color: #0b1220;
+            padding: 8px 12px;
+          "
+          >Back to app</a
+        >
       </div>
 
-      <div style="margin-top:12px" class="practice-wrapper">
+      <div style="margin-top: 12px" class="practice-wrapper">
         <pre id="usersPre">No data loaded.</pre>
       </div>
     </div>
