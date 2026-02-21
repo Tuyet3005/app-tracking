@@ -23,6 +23,7 @@ app.use(
   session({
     secret: process.env.SESSION_SECRET || "default_secret",
     resave: false,
+    rolling: true,
     saveUninitialized: false,
     cookie: {
       path: "/",
